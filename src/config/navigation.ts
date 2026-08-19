@@ -1,12 +1,10 @@
 import type { LucideIcon } from "lucide-react";
 import {
-  DatabaseBackup,
   FolderKanban,
   House,
   Info,
   KeyRound,
   Palette,
-  ShieldCheck,
   UserRound,
   UsersRound,
 } from "lucide-react";
@@ -44,15 +42,8 @@ export const SETTINGS_NAVIGATION: readonly NavigationGroup[] = [
     ],
   },
   {
-    title: "数据",
-    items: [{ title: "数据与备份", url: "/dashboard/settings/data", icon: DatabaseBackup }],
-  },
-  {
     title: "管理",
-    items: [
-      { title: "用户", url: "/dashboard/settings/users", icon: UsersRound, adminOnly: true },
-      { title: "角色与权限", url: "/dashboard/settings/roles", icon: ShieldCheck, adminOnly: true },
-    ],
+    items: [{ title: "用户", url: "/dashboard/settings/users", icon: UsersRound, adminOnly: true }],
   },
   {
     title: "系统",
