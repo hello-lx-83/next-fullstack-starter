@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 
 import { projectBulkStatusSchema, projectIdSchema, projectInputSchema } from "@/features/projects/schema";
 import type { ActionResult } from "@/lib/action-result";
+import { recordAuditEventFromRequest } from "@/server/audit-request";
+import { getCurrentSession } from "@/server/auth/session";
 import {
   createProject,
   deleteOwnedArchivedProject,
@@ -11,6 +13,7 @@ import {
   toggleOwnedProjectArchive,
   updateOwnedProject,
 } from "@/server/dal/projects";
+import { logRequestError } from "@/server/observability/request-logger";
 
 function unauthorized(): ActionResult {
   return { ok: false, message: "登录状态已失效，请重新登录" };
@@ -26,7 +29,8 @@ export async function createProjectAction(
   let created: Awaited<ReturnType<typeof createProject>>;
   try {
     created = await createProject(parsed.data);
-  } catch {
+  } catch (error) {
+    await logRequestError("project.create_failed", error);
     return { ok: false, message: "创建项目失败，请稍后重试" };
   }
   if (!created) return unauthorized();
@@ -51,7 +55,8 @@ export async function updateProjectAction(
   let updated: Awaited<ReturnType<typeof updateOwnedProject>>;
   try {
     updated = await updateOwnedProject(projectId.data, parsed.data);
-  } catch {
+  } catch (error) {
+    await logRequestError("project.update_failed", error, { projectId: projectId.data });
     return { ok: false, message: "更新项目失败，请稍后重试" };
   }
   if (!updated) return { ok: false, message: "项目不存在或你没有操作权限" };
@@ -67,7 +72,8 @@ export async function toggleProjectArchiveAction(projectId: string): Promise<Act
   let updated: Awaited<ReturnType<typeof toggleOwnedProjectArchive>>;
   try {
     updated = await toggleOwnedProjectArchive(parsed.data);
-  } catch {
+  } catch (error) {
+    await logRequestError("project.status_change_failed", error, { projectId: parsed.data });
     return { ok: false, message: "更新项目状态失败，请稍后重试" };
   }
   if (!updated) return { ok: false, message: "项目不存在或你没有操作权限" };
@@ -87,7 +93,8 @@ export async function setProjectsStatusAction(
   let updated: Awaited<ReturnType<typeof setOwnedProjectsStatus>>;
   try {
     updated = await setOwnedProjectsStatus(parsed.data.projectIds, parsed.data.status);
-  } catch {
+  } catch (error) {
+    await logRequestError("project.bulk_status_change_failed", error, { projectCount: parsed.data.projectIds.length });
     return { ok: false, message: "批量更新项目失败，请稍后重试" };
   }
   if (!updated) return unauthorized();
@@ -103,10 +110,20 @@ export async function deleteProjectAction(projectId: string): Promise<ActionResu
   let deleted: Awaited<ReturnType<typeof deleteOwnedArchivedProject>>;
   try {
     deleted = await deleteOwnedArchivedProject(parsed.data);
-  } catch {
+  } catch (error) {
+    await logRequestError("project.delete_failed", error, { projectId: parsed.data });
     return { ok: false, message: "删除项目失败，请稍后重试" };
   }
   if (!deleted) return { ok: false, message: "只有已归档且有权限的项目可以永久删除" };
+  const session = await getCurrentSession();
+  if (session) {
+    await recordAuditEventFromRequest({
+      action: "project.deleted",
+      actorUserId: session.user.id,
+      targetId: parsed.data,
+      targetType: "project",
+    });
+  }
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/projects");
   return { ok: true };

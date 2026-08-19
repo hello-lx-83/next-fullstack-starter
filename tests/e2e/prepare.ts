@@ -1,6 +1,8 @@
 import Database from "better-sqlite3";
+import { drizzle } from "drizzle-orm/better-sqlite3";
+import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 
-import { existsSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, rmSync } from "node:fs";
 import { resolve } from "node:path";
 
 async function prepare() {
@@ -11,11 +13,7 @@ async function prepare() {
   process.env.BETTER_AUTH_SECRET = "e2e-test-secret-at-least-32-characters-long";
 
   const sqlite = new Database(databasePath);
-  const migration = readFileSync(resolve("drizzle/0000_abandoned_fat_cobra.sql"), "utf8").replaceAll(
-    "--> statement-breakpoint",
-    "",
-  );
-  sqlite.exec(migration);
+  migrate(drizzle(sqlite), { migrationsFolder: resolve("drizzle") });
   sqlite.close();
 
   const [{ createAuth }, { db }, { user }] = await Promise.all([

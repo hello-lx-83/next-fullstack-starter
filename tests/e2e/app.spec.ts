@@ -12,6 +12,9 @@ test("健康检查可用，未登录用户会被重定向到登录页", async ({
   const health = await request.get("/api/health");
   expect(health.status()).toBe(200);
   await expect(health.json()).resolves.toEqual({ status: "ok", database: "ok" });
+  expect(health.headers()["content-security-policy"]).toContain("frame-ancestors 'none'");
+  expect(health.headers()["x-content-type-options"]).toBe("nosniff");
+  expect(health.headers()["x-request-id"]).toMatch(/^[0-9a-f-]{36}$/);
 
   await page.goto("/dashboard/projects");
   await expect(page).toHaveURL(/\/login\?next=%2Fdashboard%2Fprojects/);
@@ -47,28 +50,29 @@ test("管理员可以登录并完成项目 CRUD", async ({ page }) => {
       password: "AdminPass123!",
       role: "admin",
     },
+    headers: { origin: "http://localhost:3100" },
   });
   expect(secondAdmin.status()).toBe(403);
 
   await page.getByRole("link", { name: "项目", exact: true }).click();
-  await page.getByRole("link", { name: "完整新建" }).click();
-  await expect(page).toHaveURL(/\/dashboard\/projects\/new$/);
-  await page.getByLabel("项目名称").fill("E2E 项目");
-  await page.getByLabel("项目描述").fill("由 Playwright 创建");
-  await page.getByRole("button", { name: "创建项目", exact: true }).click();
-  await expect(page).toHaveURL(/\/dashboard\/projects\/[0-9a-f-]+$/);
-  await expect(page.getByRole("heading", { name: "E2E 项目" })).toBeVisible();
+  await page.getByRole("button", { name: "新建项目" }).click();
+  await page.getByLabel("名称").fill("E2E 项目");
+  await page.getByLabel("描述").fill("由 Playwright 创建");
+  await page.getByRole("button", { name: "创建", exact: true }).click();
+  await expect(page.getByText("E2E 项目", { exact: true })).toBeVisible();
 
-  await page.getByRole("link", { name: "编辑", exact: true }).click();
-  await page.getByLabel("项目名称").fill("E2E 项目（已编辑）");
-  await page.getByRole("button", { name: "保存更改" }).click();
-  await expect(page.getByRole("heading", { name: "E2E 项目（已编辑）" })).toBeVisible();
+  await page.getByRole("button", { name: "打开“E2E 项目”的操作菜单" }).click();
+  await page.getByRole("menuitem", { name: "编辑" }).click();
+  await page.getByLabel("名称").fill("E2E 项目（已编辑）");
+  await page.getByRole("button", { name: "保存", exact: true }).click();
+  await expect(page.getByText("E2E 项目（已编辑）", { exact: true })).toBeVisible();
 
-  await page.getByRole("button", { name: "归档" }).click();
+  await page.getByRole("button", { name: "打开“E2E 项目（已编辑）”的操作菜单" }).click();
+  await page.getByRole("menuitem", { name: "归档" }).click();
   await expect(page.getByText("已归档", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "永久删除" }).click();
-  await page.getByRole("button", { name: "确认永久删除" }).click();
-  await expect(page).toHaveURL(/\/dashboard\/projects$/);
+  await page.getByRole("button", { name: "打开“E2E 项目（已编辑）”的操作菜单" }).click();
+  await page.getByRole("menuitem", { name: "删除" }).click();
+  await page.getByRole("button", { name: "确认删除" }).click();
   await expect(page.getByText("E2E 项目（已编辑）")).toHaveCount(0);
 
   await openAdminUserSettings(page);
@@ -85,6 +89,18 @@ test("管理员可以登录并完成项目 CRUD", async ({ page }) => {
   await expect(userRow.getByRole("button", { name: "启用" })).toBeVisible();
   await userRow.getByRole("button", { name: "启用" }).click();
   await expect(userRow.getByRole("button", { name: "停用" })).toBeVisible();
+  await userRow.getByRole("button", { name: "重置密码" }).click();
+  await page.getByLabel("新密码", { exact: true }).fill("ResetPass123!");
+  await page.getByLabel("确认新密码").fill("ResetPass123!");
+  await page.getByRole("button", { name: "重置并撤销会话" }).click();
+  await expect(page.getByText("密码已重置，用户的所有会话已撤销")).toBeVisible();
+
+  await page.getByRole("link", { name: "审计日志" }).click();
+  await expect(page).toHaveURL(/\/dashboard\/settings\/audit$/);
+  await expect(page.getByRole("table").getByText("管理员重置密码", { exact: true })).toBeVisible();
+
+  await page.getByRole("link", { name: "安全", exact: true }).click();
+  await expect(page.getByText("当前会话", { exact: true })).toBeVisible();
 
   await page.goto("/dashboard/profile");
   await expect(page).toHaveURL(/\/dashboard\/settings\/profile$/);
@@ -109,8 +125,8 @@ test("普通用户只能操作自己的项目，管理员可查看全部项目",
   await expect(page.getByText("isolated-user@example.com")).toBeVisible();
 
   await page.getByRole("link", { name: "项目", exact: true }).click();
-  await page.getByRole("button", { name: "快速新建" }).click();
-  await page.getByLabel("项目名称").fill("隔离管理员项目");
+  await page.getByRole("button", { name: "新建项目" }).click();
+  await page.getByLabel("名称").fill("隔离管理员项目");
   await page.getByRole("button", { name: "创建", exact: true }).click();
   await expect(page.getByText("隔离管理员项目")).toBeVisible();
 
@@ -127,9 +143,12 @@ test("普通用户只能操作自己的项目，管理员可查看全部项目",
   await expect(userPage.getByRole("link", { name: "用户", exact: true })).toHaveCount(0);
   await userPage.goto("/dashboard/settings/users");
   await expect(userPage).toHaveURL(/\/unauthorized$/);
+  await userPage.goto("/dashboard/settings/audit");
+  await expect(userPage).toHaveURL(/\/unauthorized$/);
+
   await userPage.goto("/dashboard/projects");
-  await userPage.getByRole("button", { name: "快速新建" }).click();
-  await userPage.getByLabel("项目名称").fill("普通用户项目");
+  await userPage.getByRole("button", { name: "新建项目" }).click();
+  await userPage.getByLabel("名称").fill("普通用户项目");
   await userPage.getByRole("button", { name: "创建", exact: true }).click();
   await expect(userPage.getByText("普通用户项目")).toBeVisible();
   await expect(userPage.getByText("隔离管理员项目")).toHaveCount(0);
@@ -162,4 +181,18 @@ test("普通用户只能操作自己的项目，管理员可查看全部项目",
   await expect(page.getByRole("link", { name: "前往下一页" })).toBeVisible();
   await expect(page.getByText("上一页", { exact: true })).toBeHidden();
   await expect(page.getByText("下一页", { exact: true })).toBeHidden();
+});
+
+test("登录接口会对连续失败请求限流", async ({ request }) => {
+  const statuses: number[] = [];
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const response = await request.post("/api/auth/sign-in/email", {
+      data: { email: "missing@example.com", password: "WrongPass123!" },
+      headers: { origin: "http://localhost:3100", "x-forwarded-for": "127.0.0.99" },
+    });
+    statuses.push(response.status());
+  }
+
+  expect(statuses.slice(0, 5)).not.toContain(429);
+  expect(statuses[5]).toBe(429);
 });

@@ -10,3 +10,16 @@ export const userBannedSchema = z.object({
   userId: z.string().trim().min(1, "用户参数无效").max(128, "用户参数无效"),
   banned: z.boolean(),
 });
+
+export const deleteUserSchema = userBannedSchema.pick({ userId: true });
+
+export const resetUserPasswordSchema = z
+  .object({
+    userId: z.string().trim().min(1, "用户参数无效").max(128, "用户参数无效"),
+    newPassword: z.string().min(8, "密码至少需要 8 个字符").max(128, "密码不能超过 128 个字符"),
+    confirmPassword: z.string(),
+  })
+  .refine((value) => value.newPassword === value.confirmPassword, {
+    message: "两次输入的密码不一致",
+    path: ["confirmPassword"],
+  });

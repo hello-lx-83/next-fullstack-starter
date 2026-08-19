@@ -1,11 +1,10 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { Plus } from "lucide-react";
 
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
-import { CreateProjectDialog } from "@/features/projects/project-dialog";
+import { ProjectDialog } from "@/features/projects/project-dialogs";
 import { ProjectTable } from "@/features/projects/project-table";
 import { parseProjectListQuery, projectListHref } from "@/features/projects/schema";
 import { isAdmin } from "@/server/auth/permissions";
@@ -26,17 +25,17 @@ export default async function ProjectsPage({
     <>
       <PageHeader
         title="项目"
-        description="搜索、筛选和管理本地 SQLite 中的项目；普通用户只能访问自己的项目。"
+        description="项目增删改查示例；普通用户只能访问自己的项目。"
         actions={
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" asChild>
-              <Link href="/dashboard/projects/new">
+          <ProjectDialog
+            mode="create"
+            trigger={
+              <Button>
                 <Plus data-icon="inline-start" />
-                完整新建
-              </Link>
-            </Button>
-            <CreateProjectDialog />
-          </div>
+                新建项目
+              </Button>
+            }
+          />
         }
       />
       <ProjectTable

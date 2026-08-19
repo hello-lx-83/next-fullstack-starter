@@ -59,3 +59,41 @@ export async function setUserBanned(
     return "updated";
   });
 }
+
+export async function deleteUser(
+  input: { userId: string },
+  database: typeof db = db,
+): Promise<"deleted" | "unauthorized" | "protected" | "not_found"> {
+  const currentSession = await getCurrentSession();
+  if (!currentSession || !isAdmin(currentSession.user.role)) return "unauthorized";
+  if (input.userId === currentSession.user.id) return "protected";
+
+  return database.transaction((tx) => {
+    const target = tx.select({ role: user.role }).from(user).where(eq(user.id, input.userId)).get();
+    if (!target) return "not_found";
+    if (isAdmin(target.role)) return "protected";
+
+    tx.delete(user).where(eq(user.id, input.userId)).run();
+    return "deleted";
+  });
+}
+
+export async function validatePasswordResetTarget(
+  input: { userId: string },
+  database: typeof db = db,
+): Promise<"allowed" | "unauthorized" | "protected" | "not_found"> {
+  const currentSession = await getCurrentSession();
+  if (!currentSession || !isAdmin(currentSession.user.role)) return "unauthorized";
+  if (input.userId === currentSession.user.id) return "protected";
+
+  const target = await database.select({ role: user.role }).from(user).where(eq(user.id, input.userId)).get();
+  if (!target) return "not_found";
+  return isAdmin(target.role) ? "protected" : "allowed";
+}
+
+export async function revokeUserSessionsAfterPasswordReset(
+  input: { userId: string },
+  database: typeof db = db,
+): Promise<void> {
+  await database.delete(authSession).where(eq(authSession.userId, input.userId));
+}

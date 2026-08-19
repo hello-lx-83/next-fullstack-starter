@@ -4,15 +4,23 @@ import { NextResponse } from "next/server";
 import { getSessionCookie } from "better-auth/cookies";
 
 export function proxy(request: NextRequest) {
-  const hasSession = Boolean(getSessionCookie(request));
-  if (!hasSession) {
+  const requestId = crypto.randomUUID();
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-request-id", requestId);
+
+  if (request.nextUrl.pathname.startsWith("/dashboard") && !getSessionCookie(request)) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("next", request.nextUrl.pathname);
-    return NextResponse.redirect(loginUrl);
+    const response = NextResponse.redirect(loginUrl);
+    response.headers.set("x-request-id", requestId);
+    return response;
   }
-  return NextResponse.next();
+
+  const response = NextResponse.next({ request: { headers: requestHeaders } });
+  response.headers.set("x-request-id", requestId);
+  return response;
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)"],
 };

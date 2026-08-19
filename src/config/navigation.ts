@@ -1,13 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import {
-  FolderKanban,
-  House,
-  Info,
-  KeyRound,
-  Palette,
-  UserRound,
-  UsersRound,
-} from "lucide-react";
+import { FolderKanban, House, Info, KeyRound, Palette, ScrollText, UserRound, UsersRound } from "lucide-react";
 
 export interface NavigationItem {
   title: string;
@@ -43,7 +35,10 @@ export const SETTINGS_NAVIGATION: readonly NavigationGroup[] = [
   },
   {
     title: "管理",
-    items: [{ title: "用户", url: "/dashboard/settings/users", icon: UsersRound, adminOnly: true }],
+    items: [
+      { title: "用户", url: "/dashboard/settings/users", icon: UsersRound, adminOnly: true },
+      { title: "审计日志", url: "/dashboard/settings/audit", icon: ScrollText, adminOnly: true },
+    ],
   },
   {
     title: "系统",

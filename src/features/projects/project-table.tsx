@@ -1,8 +1,7 @@
 "use client";
 
-import { type FormEvent, type ReactNode, useEffect, useState, useTransition, ViewTransition } from "react";
+import { type FormEvent, type ReactNode, useEffect, useState, useTransition } from "react";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { createColumnHelper, useTable } from "@tanstack/react-table";
@@ -47,7 +46,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { setProjectsStatusAction } from "@/features/projects/actions";
-import { ProjectActions } from "@/features/projects/project-dialog";
+import { ProjectActions } from "@/features/projects/project-dialogs";
 import { type ProjectDto, type ProjectListQuery, type ProjectSort, projectListHref } from "@/features/projects/schema";
 import { dataTableFeatures } from "@/lib/data-table-features";
 import { cn } from "@/lib/utils";
@@ -79,17 +78,12 @@ const projectColumns = columnHelper.columns([
     ),
   }),
   columnHelper.accessor("name", {
-    header: "项目",
-    cell: ({ row }) => (
-      <div className="max-w-md">
-        <ViewTransition name={`project-title-${row.original.id}`} share="project-title" default="none">
-          <Link href={`/dashboard/projects/${row.original.id}`} className="font-medium hover:underline">
-            {row.original.name}
-          </Link>
-        </ViewTransition>
-        <p className="truncate text-muted-foreground text-xs">{row.original.description || "暂无描述"}</p>
-      </div>
-    ),
+    header: "名称",
+    cell: ({ getValue }) => <span className="font-medium">{getValue()}</span>,
+  }),
+  columnHelper.accessor("description", {
+    header: "描述",
+    cell: ({ getValue }) => <p className="max-w-md truncate text-muted-foreground">{getValue() || "-"}</p>,
   }),
   columnHelper.accessor("ownerName", { id: "owner", header: "所有者" }),
   columnHelper.accessor("status", {
@@ -262,9 +256,14 @@ export function ProjectTable({
                       checked={column.getIsVisible()}
                       onCheckedChange={(checked) => column.toggleVisibility(Boolean(checked))}
                     >
-                      {{ name: "项目", owner: "所有者", status: "状态", updatedAt: "更新时间", createdAt: "创建时间" }[
-                        column.id
-                      ] ?? column.id}
+                      {{
+                        name: "名称",
+                        description: "描述",
+                        owner: "所有者",
+                        status: "状态",
+                        updatedAt: "更新时间",
+                        createdAt: "创建时间",
+                      }[column.id] ?? column.id}
                     </DropdownMenuCheckboxItem>
                   ))}
               </DropdownMenuGroup>
@@ -337,11 +336,7 @@ export function ProjectTable({
                       <RotateCcw data-icon="inline-start" />
                       清除筛选
                     </Button>
-                  ) : (
-                    <Button asChild>
-                      <Link href="/dashboard/projects/new">创建项目</Link>
-                    </Button>
-                  )}
+                  ) : null}
                 </Empty>
               </CardContent>
             </Card>

@@ -74,6 +74,43 @@ export const verification = sqliteTable(
   (table) => [index("verification_identifier_idx").on(table.identifier)],
 );
 
+export const rateLimit = sqliteTable(
+  "rate_limit",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    key: text("key").notNull(),
+    count: integer("count").notNull(),
+    lastRequest: integer("last_request").notNull(),
+  },
+  (table) => [uniqueIndex("rate_limit_key_unique").on(table.key)],
+);
+
+export const auditEvent = sqliteTable(
+  "audit_event",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    action: text("action").notNull(),
+    outcome: text("outcome", { enum: ["success", "failure"] })
+      .notNull()
+      .default("success"),
+    actorUserId: text("actor_user_id").references(() => user.id, { onDelete: "set null" }),
+    targetType: text("target_type"),
+    targetId: text("target_id"),
+    requestId: text("request_id"),
+    userAgent: text("user_agent"),
+    createdAt: timestamp("created_at").notNull().default(sql`(unixepoch() * 1000)`),
+  },
+  (table) => [
+    index("audit_event_actor_created_idx").on(table.actorUserId, table.createdAt),
+    index("audit_event_action_created_idx").on(table.action, table.createdAt),
+    index("audit_event_target_idx").on(table.targetType, table.targetId),
+  ],
+);
+
 export const project = sqliteTable(
   "project",
   {
@@ -94,7 +131,7 @@ export const project = sqliteTable(
   (table) => [index("project_owner_status_updated_idx").on(table.ownerId, table.status, table.updatedAt)],
 );
 
-export const schema = { account, project, session, user, verification };
+export const schema = { account, auditEvent, project, rateLimit, session, user, verification };
 
 export type ProjectRecord = typeof project.$inferSelect;
 export type UserRecord = typeof user.$inferSelect;
