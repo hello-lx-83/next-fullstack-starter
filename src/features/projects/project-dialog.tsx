@@ -1,8 +1,11 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 
-import { ArchiveRestore, LoaderCircle, Pencil, Plus } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+
+import { ArchiveRestore, Ellipsis, Eye, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -19,6 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -26,83 +30,57 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { createProjectAction, toggleProjectArchiveAction, updateProjectAction } from "@/features/projects/actions";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Spinner } from "@/components/ui/spinner";
+import { createProjectAction, deleteProjectAction, toggleProjectArchiveAction } from "@/features/projects/actions";
+import { initialProjectFormState, ProjectFields } from "@/features/projects/project-form";
 import type { ProjectDto } from "@/features/projects/schema";
-import type { ActionResult } from "@/lib/action-result";
-
-const initialState: ActionResult<{ id: string }> = { ok: true };
-
-function ProjectFields({ project, state }: { project?: ProjectDto; state: ActionResult<{ id: string }> }) {
-  const errors = !state.ok ? state.fieldErrors : undefined;
-  return (
-    <div className="space-y-4 py-2">
-      {project && <input type="hidden" name="projectId" value={project.id} />}
-      <div className="space-y-2">
-        <Label htmlFor={`project-name-${project?.id ?? "new"}`}>项目名称</Label>
-        <Input
-          id={`project-name-${project?.id ?? "new"}`}
-          name="name"
-          defaultValue={project?.name}
-          maxLength={100}
-          required
-        />
-        {errors?.name?.map((error) => (
-          <p className="text-destructive text-xs" key={error}>
-            {error}
-          </p>
-        ))}
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor={`project-description-${project?.id ?? "new"}`}>项目描述</Label>
-        <Textarea
-          id={`project-description-${project?.id ?? "new"}`}
-          name="description"
-          defaultValue={project?.description ?? ""}
-          maxLength={500}
-          rows={4}
-        />
-        {errors?.description?.map((error) => (
-          <p className="text-destructive text-xs" key={error}>
-            {error}
-          </p>
-        ))}
-      </div>
-      {!state.ok && <p className="text-destructive text-sm">{state.message}</p>}
-    </div>
-  );
-}
 
 export function CreateProjectDialog() {
+  const router = useRouter();
+  const formRef = useRef<HTMLFormElement>(null);
   const [open, setOpen] = useState(false);
-  const [state, action, pending] = useActionState(createProjectAction, initialState);
+  const [state, action, pending] = useActionState(createProjectAction, initialProjectFormState);
+
   useEffect(() => {
-    if (state.ok && state.data) {
-      setOpen(false);
-      toast.success("项目已创建");
-    }
-  }, [state]);
+    if (!state.ok || !state.data) return;
+    formRef.current?.reset();
+    setOpen(false);
+    toast.success("项目已创建");
+    router.refresh();
+  }, [router, state]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button>
-          <Plus />
-          新建项目
+          <Plus data-icon="inline-start" />
+          快速新建
         </Button>
       </DialogTrigger>
       <DialogContent>
-        <form action={action}>
+        <form ref={formRef} action={action} className="flex flex-col gap-4">
           <DialogHeader>
-            <DialogTitle>新建项目</DialogTitle>
-            <DialogDescription>创建一个仅你和管理员可以管理的项目。</DialogDescription>
+            <DialogTitle>快速新建项目</DialogTitle>
+            <DialogDescription>填写基本信息后即可创建；更多操作可以在项目详情页完成。</DialogDescription>
           </DialogHeader>
-          <ProjectFields state={state} />
+          <ProjectFields state={state} idPrefix="project-dialog-new" />
           <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="outline">
+                取消
+              </Button>
+            </DialogClose>
             <Button type="submit" disabled={pending}>
-              {pending && <LoaderCircle className="animate-spin" />}创建
+              {pending ? <Spinner data-icon="inline-start" /> : <Plus data-icon="inline-start" />}
+              创建
             </Button>
           </DialogFooter>
         </form>
@@ -112,78 +90,129 @@ export function CreateProjectDialog() {
 }
 
 export function ProjectActions({ project }: { project: ProjectDto }) {
-  const [open, setOpen] = useState(false);
-  const [archiving, setArchiving] = useState(false);
-  const [state, action, pending] = useActionState(updateProjectAction, initialState);
-  useEffect(() => {
-    if (state.ok && state.data) {
-      setOpen(false);
-      toast.success("项目已更新");
-    }
-  }, [state]);
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
 
-  async function toggleArchive() {
-    setArchiving(true);
-    try {
-      const result = await toggleProjectArchiveAction(project.id);
-      result.ok
-        ? toast.success(project.status === "active" ? "项目已归档" : "项目已恢复")
-        : toast.error(result.message);
-    } catch {
-      toast.error("更新项目状态失败，请稍后重试");
-    } finally {
-      setArchiving(false);
-    }
+  function toggleArchive() {
+    startTransition(async () => {
+      try {
+        const result = await toggleProjectArchiveAction(project.id);
+        if (!result.ok) {
+          toast.error(result.message);
+          return;
+        }
+        toast.success(project.status === "active" ? "项目已归档" : "项目已恢复");
+        router.refresh();
+      } catch {
+        toast.error("更新项目状态失败，请稍后重试");
+      }
+    });
   }
 
   return (
-    <div className="flex justify-end gap-2">
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger asChild>
-          <Button variant="outline" size="sm">
-            <Pencil />
-            编辑
-          </Button>
-        </DialogTrigger>
-        <DialogContent>
-          <form action={action}>
-            <DialogHeader>
-              <DialogTitle>编辑项目</DialogTitle>
-              <DialogDescription>更新项目的基本信息。</DialogDescription>
-            </DialogHeader>
-            <ProjectFields project={project} state={state} />
-            <DialogFooter>
-              <Button type="submit" disabled={pending}>
-                {pending && <LoaderCircle className="animate-spin" />}保存
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-      <AlertDialog>
-        <AlertDialogTrigger asChild>
-          <Button variant="outline" size="sm" disabled={archiving}>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon-sm" disabled={pending} aria-label={`打开“${project.name}”的操作菜单`}>
+          {pending ? <Spinner /> : <Ellipsis />}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-36">
+        <DropdownMenuGroup>
+          <DropdownMenuItem asChild>
+            <Link href={`/dashboard/projects/${project.id}`}>
+              <Eye />
+              查看
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link href={`/dashboard/projects/${project.id}/edit`}>
+              <Pencil />
+              编辑
+            </Link>
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuGroup>
+          <DropdownMenuItem onSelect={toggleArchive}>
             <ArchiveRestore />
             {project.status === "active" ? "归档" : "恢复"}
-          </Button>
-        </AlertDialogTrigger>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{project.status === "active" ? "归档这个项目？" : "恢复这个项目？"}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {project.status === "active"
-                ? `“${project.name}”归档后仍会保留全部数据，可以随时恢复。`
-                : `“${project.name}”将恢复为进行中状态。`}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction onClick={() => void toggleArchive()}>
-              {project.status === "active" ? "确认归档" : "确认恢复"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+export function ProjectDetailActions({ project }: { project: ProjectDto }) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+
+  function toggleArchive() {
+    startTransition(async () => {
+      try {
+        const result = await toggleProjectArchiveAction(project.id);
+        if (!result.ok) {
+          toast.error(result.message);
+          return;
+        }
+        toast.success(project.status === "active" ? "项目已归档" : "项目已恢复");
+        router.refresh();
+      } catch {
+        toast.error("更新项目状态失败，请稍后重试");
+      }
+    });
+  }
+
+  function deleteProject() {
+    startTransition(async () => {
+      try {
+        const result = await deleteProjectAction(project.id);
+        if (!result.ok) {
+          toast.error(result.message);
+          return;
+        }
+        toast.success("项目已永久删除");
+        router.replace("/dashboard/projects");
+      } catch {
+        toast.error("删除项目失败，请稍后重试");
+      }
+    });
+  }
+
+  return (
+    <div className="flex flex-wrap justify-end gap-2">
+      <Button variant="outline" asChild>
+        <Link href={`/dashboard/projects/${project.id}/edit`}>
+          <Pencil data-icon="inline-start" />
+          编辑
+        </Link>
+      </Button>
+      <Button variant="outline" disabled={pending} onClick={toggleArchive}>
+        {pending ? <Spinner data-icon="inline-start" /> : <ArchiveRestore data-icon="inline-start" />}
+        {project.status === "active" ? "归档" : "恢复"}
+      </Button>
+      {project.status === "archived" ? (
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="destructive" disabled={pending}>
+              <Trash2 data-icon="inline-start" />
+              永久删除
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>永久删除“{project.name}”？</AlertDialogTitle>
+              <AlertDialogDescription>该操作无法撤销。项目记录会从本地数据库中永久移除。</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>取消</AlertDialogCancel>
+              <AlertDialogAction variant="destructive" onClick={deleteProject}>
+                确认永久删除
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      ) : null}
     </div>
   );
 }

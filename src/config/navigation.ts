@@ -74,7 +74,11 @@ export function getVisibleSettingsNavigation(isAdmin: boolean): NavigationGroup[
 export function getDashboardBreadcrumbs(pathname: string): BreadcrumbItem[] {
   if (pathname === "/dashboard") return [{ title: "首页" }];
   if (pathname === "/dashboard/projects" || pathname.startsWith("/dashboard/projects/")) {
-    return [{ title: "项目" }];
+    if (pathname === "/dashboard/projects") return [{ title: "项目" }];
+    if (pathname === "/dashboard/projects/new") {
+      return [{ title: "项目", url: "/dashboard/projects" }, { title: "新建" }];
+    }
+    return [{ title: "项目", url: "/dashboard/projects" }, { title: pathname.endsWith("/edit") ? "编辑" : "详情" }];
   }
 
   if (pathname === "/dashboard/settings" || pathname.startsWith("/dashboard/settings/")) {

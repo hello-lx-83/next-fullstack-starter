@@ -2,7 +2,15 @@ import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { getCurrentSession } from "@/server/auth/session";
-import { createProject, toggleOwnedProjectArchive, updateOwnedProject } from "@/server/dal/projects";
+import {
+  createProject,
+  deleteOwnedArchivedProject,
+  getProject,
+  listProjects,
+  setOwnedProjectsStatus,
+  toggleOwnedProjectArchive,
+  updateOwnedProject,
+} from "@/server/dal/projects";
 import { createDatabase } from "@/server/db";
 import { project, user } from "@/server/db/schema";
 
@@ -62,5 +70,52 @@ describe("Projects DAL", () => {
     mockedGetCurrentSession.mockResolvedValue(null);
     await expect(createProject({ name: "未授权", description: "" }, database.db)).resolves.toBeUndefined();
     expect(await database.db.select().from(project)).toHaveLength(0);
+  });
+
+  it("按权限、搜索与状态分页项目", async () => {
+    mockSession("u1");
+    await createProject({ name: "Alpha", description: "first" }, database.db);
+    const archived = await createProject({ name: "Beta", description: "second" }, database.db);
+    if (!archived) throw new Error("项目创建失败");
+    await toggleOwnedProjectArchive(archived.id, database.db);
+
+    mockSession("u2");
+    await createProject({ name: "Alpha other", description: "hidden" }, database.db);
+
+    mockSession("u1");
+    const result = await listProjects(
+      { q: "Alpha", status: "active", sort: "name-asc", page: 1, pageSize: 10 },
+      database.db,
+    );
+    expect(result.total).toBe(1);
+    expect(result.projects.map((item) => item.name)).toEqual(["Alpha"]);
+  });
+
+  it("将搜索中的 SQL 通配符作为普通字符处理", async () => {
+    mockSession("u1");
+    await createProject({ name: "完成度 100%", description: "包含百分号" }, database.db);
+    await createProject({ name: "普通项目", description: "没有特殊字符" }, database.db);
+
+    const result = await listProjects(
+      { q: "%", status: "all", sort: "updated-desc", page: 1, pageSize: 10 },
+      database.db,
+    );
+    expect(result.projects.map((item) => item.name)).toEqual(["完成度 100%"]);
+  });
+
+  it("限制详情访问，并只允许永久删除已归档项目", async () => {
+    mockSession("u1");
+    const created = await createProject({ name: "详情项目", description: "" }, database.db);
+    if (!created) throw new Error("项目创建失败");
+    expect((await getProject(created.id, database.db))?.name).toBe("详情项目");
+    expect(await deleteOwnedArchivedProject(created.id, database.db)).toBeUndefined();
+
+    mockSession("u2");
+    expect(await getProject(created.id, database.db)).toBeUndefined();
+    expect(await setOwnedProjectsStatus([created.id], "archived", database.db)).toEqual([]);
+
+    mockSession("u1");
+    await setOwnedProjectsStatus([created.id], "archived", database.db);
+    expect((await deleteOwnedArchivedProject(created.id, database.db))?.id).toBe(created.id);
   });
 });

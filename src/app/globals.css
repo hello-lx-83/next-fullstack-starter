@@ -239,6 +239,24 @@ html {
   transition: none !important;
 }
 
+::view-transition {
+  pointer-events: none;
+}
+
+::view-transition-group(.project-title) {
+  animation-duration: 220ms;
+  animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+  }
+}
+
 [data-print-root] {
   display: none;
 }

@@ -51,15 +51,25 @@ test("管理员可以登录并完成项目 CRUD", async ({ page }) => {
   expect(secondAdmin.status()).toBe(403);
 
   await page.getByRole("link", { name: "项目", exact: true }).click();
-  await page.getByRole("button", { name: "新建项目" }).click();
+  await page.getByRole("link", { name: "完整新建" }).click();
+  await expect(page).toHaveURL(/\/dashboard\/projects\/new$/);
   await page.getByLabel("项目名称").fill("E2E 项目");
   await page.getByLabel("项目描述").fill("由 Playwright 创建");
-  await page.getByRole("button", { name: "创建", exact: true }).click();
-  await expect(page.getByText("E2E 项目")).toBeVisible();
+  await page.getByRole("button", { name: "创建项目", exact: true }).click();
+  await expect(page).toHaveURL(/\/dashboard\/projects\/[0-9a-f-]+$/);
+  await expect(page.getByRole("heading", { name: "E2E 项目" })).toBeVisible();
+
+  await page.getByRole("link", { name: "编辑", exact: true }).click();
+  await page.getByLabel("项目名称").fill("E2E 项目（已编辑）");
+  await page.getByRole("button", { name: "保存更改" }).click();
+  await expect(page.getByRole("heading", { name: "E2E 项目（已编辑）" })).toBeVisible();
 
   await page.getByRole("button", { name: "归档" }).click();
-  await page.getByRole("button", { name: "确认归档" }).click();
   await expect(page.getByText("已归档", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "永久删除" }).click();
+  await page.getByRole("button", { name: "确认永久删除" }).click();
+  await expect(page).toHaveURL(/\/dashboard\/projects$/);
+  await expect(page.getByText("E2E 项目（已编辑）")).toHaveCount(0);
 
   await openAdminUserSettings(page);
   await page.getByRole("button", { name: "创建用户" }).click();
@@ -99,7 +109,7 @@ test("普通用户只能操作自己的项目，管理员可查看全部项目",
   await expect(page.getByText("isolated-user@example.com")).toBeVisible();
 
   await page.getByRole("link", { name: "项目", exact: true }).click();
-  await page.getByRole("button", { name: "新建项目" }).click();
+  await page.getByRole("button", { name: "快速新建" }).click();
   await page.getByLabel("项目名称").fill("隔离管理员项目");
   await page.getByRole("button", { name: "创建", exact: true }).click();
   await expect(page.getByText("隔离管理员项目")).toBeVisible();
@@ -118,7 +128,7 @@ test("普通用户只能操作自己的项目，管理员可查看全部项目",
   await userPage.goto("/dashboard/settings/users");
   await expect(userPage).toHaveURL(/\/unauthorized$/);
   await userPage.goto("/dashboard/projects");
-  await userPage.getByRole("button", { name: "新建项目" }).click();
+  await userPage.getByRole("button", { name: "快速新建" }).click();
   await userPage.getByLabel("项目名称").fill("普通用户项目");
   await userPage.getByRole("button", { name: "创建", exact: true }).click();
   await expect(userPage.getByText("普通用户项目")).toBeVisible();
@@ -129,4 +139,27 @@ test("普通用户只能操作自己的项目，管理员可查看全部项目",
   await page.goto("/dashboard/projects");
   await expect(page.getByText("普通用户项目")).toBeVisible();
   await expect(page.getByText("隔离用户", { exact: true })).toBeVisible();
+
+  await page.getByRole("textbox", { name: "搜索项目" }).fill("普通用户项目");
+  await page.getByRole("button", { name: "搜索", exact: true }).click();
+  await expect(page).toHaveURL(/\/dashboard\/projects\?q=%E6%99%AE%E9%80%9A%E7%94%A8%E6%88%B7%E9%A1%B9%E7%9B%AE$/);
+  await expect(page.getByText("普通用户项目")).toBeVisible();
+  await expect(page.getByText("隔离管理员项目")).toHaveCount(0);
+  await page.getByRole("button", { name: "重置" }).click();
+  await expect(page.getByText("隔离管理员项目")).toBeVisible();
+
+  await expect(page.getByLabel("每页项目数")).toBeVisible();
+  await expect(page.getByText("第 1 / 1 页")).toBeVisible();
+  await expect(page.getByRole("link", { name: "前往上一页" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "前往下一页" })).toBeVisible();
+  await expect(page.getByText("上一页", { exact: true })).toBeVisible();
+  await expect(page.getByText("下一页", { exact: true })).toBeVisible();
+  await expect(page.getByText("Previous", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Next", { exact: true })).toHaveCount(0);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.getByRole("link", { name: "前往上一页" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "前往下一页" })).toBeVisible();
+  await expect(page.getByText("上一页", { exact: true })).toBeHidden();
+  await expect(page.getByText("下一页", { exact: true })).toBeHidden();
 });
