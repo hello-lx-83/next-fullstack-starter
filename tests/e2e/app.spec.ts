@@ -9,12 +9,20 @@ async function openAdminUserSettings(page: Page) {
 }
 
 test("健康检查可用，未登录用户会被重定向到登录页", async ({ page, request }) => {
-  const health = await request.get("/api/health");
+  const [health, live, ready] = await Promise.all([
+    request.get("/api/health"),
+    request.get("/api/health/live"),
+    request.get("/api/health/ready"),
+  ]);
   expect(health.status()).toBe(200);
+  expect(live.status()).toBe(200);
+  expect(ready.status()).toBe(200);
   await expect(health.json()).resolves.toEqual({ status: "ok", database: "ok" });
-  expect(health.headers()["content-security-policy"]).toContain("frame-ancestors 'none'");
-  expect(health.headers()["x-content-type-options"]).toBe("nosniff");
-  expect(health.headers()["x-request-id"]).toMatch(/^[0-9a-f-]{36}$/);
+  await expect(live.json()).resolves.toEqual({ status: "ok" });
+  await expect(ready.json()).resolves.toEqual({ status: "ok", database: "ok" });
+  expect(ready.headers()["content-security-policy"]).toContain("frame-ancestors 'none'");
+  expect(ready.headers()["x-content-type-options"]).toBe("nosniff");
+  expect(ready.headers()["x-request-id"]).toMatch(/^[0-9a-f-]{36}$/);
 
   await page.goto("/dashboard/projects");
   await expect(page).toHaveURL(/\/login\?next=%2Fdashboard%2Fprojects/);
@@ -101,6 +109,9 @@ test("管理员可以登录并完成项目 CRUD", async ({ page }) => {
 
   await page.getByRole("link", { name: "安全", exact: true }).click();
   await expect(page.getByText("当前会话", { exact: true })).toBeVisible();
+  await page.getByRole("link", { name: "数据与备份", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "数据与备份" })).toBeVisible();
+  await expect(page.getByText("pnpm db:backup")).toBeVisible();
 
   await page.goto("/dashboard/profile");
   await expect(page).toHaveURL(/\/dashboard\/settings\/profile$/);
@@ -157,7 +168,7 @@ test("普通用户只能操作自己的项目，管理员可查看全部项目",
 
   await page.goto("/dashboard/projects");
   await expect(page.getByText("普通用户项目")).toBeVisible();
-  await expect(page.getByText("隔离用户", { exact: true })).toBeVisible();
+  await expect(page.getByRole("cell", { name: "隔离用户", exact: true })).toBeVisible();
 
   await page.getByRole("textbox", { name: "搜索项目" }).fill("普通用户项目");
   await page.getByRole("button", { name: "搜索", exact: true }).click();

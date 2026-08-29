@@ -52,6 +52,7 @@ import { dataTableFeatures } from "@/lib/data-table-features";
 import { cn } from "@/lib/utils";
 
 const columnHelper = createColumnHelper<typeof dataTableFeatures, ProjectDto>();
+const projectDateFormatter = new Intl.DateTimeFormat("zh-CN", { dateStyle: "medium" });
 
 const projectColumns = columnHelper.columns([
   columnHelper.display({
@@ -79,13 +80,22 @@ const projectColumns = columnHelper.columns([
   }),
   columnHelper.accessor("name", {
     header: "名称",
-    cell: ({ getValue }) => <span className="font-medium">{getValue()}</span>,
+    cell: ({ getValue }) => <span className="block truncate font-medium">{getValue()}</span>,
   }),
   columnHelper.accessor("description", {
     header: "描述",
     cell: ({ getValue }) => <p className="max-w-md truncate text-muted-foreground">{getValue() || "-"}</p>,
   }),
-  columnHelper.accessor("ownerName", { id: "owner", header: "所有者" }),
+  columnHelper.accessor("ownerName", {
+    id: "owner",
+    header: "所有者",
+    cell: ({ getValue }) => (
+      <span>
+        <span className="md:hidden">所有者：</span>
+        {getValue()}
+      </span>
+    ),
+  }),
   columnHelper.accessor("status", {
     header: "状态",
     cell: ({ getValue }) => {
@@ -99,11 +109,21 @@ const projectColumns = columnHelper.columns([
   }),
   columnHelper.accessor("updatedAt", {
     header: "更新时间",
-    cell: ({ getValue }) => new Intl.DateTimeFormat("zh-CN", { dateStyle: "medium" }).format(new Date(getValue())),
+    cell: ({ getValue }) => (
+      <span>
+        <span className="md:hidden">更新时间：</span>
+        {projectDateFormatter.format(new Date(getValue()))}
+      </span>
+    ),
   }),
   columnHelper.accessor("createdAt", {
     header: "创建时间",
-    cell: ({ getValue }) => new Intl.DateTimeFormat("zh-CN", { dateStyle: "medium" }).format(new Date(getValue())),
+    cell: ({ getValue }) => (
+      <span>
+        <span className="md:hidden">创建时间：</span>
+        {projectDateFormatter.format(new Date(getValue()))}
+      </span>
+    ),
   }),
   columnHelper.display({
     id: "actions",
@@ -133,6 +153,25 @@ function SortDirectionIcon({ direction }: { direction: false | "asc" | "desc" })
   if (direction === "asc") return <ArrowUp data-icon="inline-end" />;
   if (direction === "desc") return <ArrowDown data-icon="inline-end" />;
   return <ArrowUpDown data-icon="inline-end" />;
+}
+
+function getResponsiveCellClassName(columnId: string) {
+  const mobileClasses: Record<string, string> = {
+    actions: "col-start-3 row-start-1 p-0 text-right",
+    createdAt: "col-start-2 col-end-4 row-start-6 p-0 text-muted-foreground",
+    description: "col-start-2 col-end-4 row-start-2 min-w-0 whitespace-normal p-0 text-muted-foreground",
+    name: "col-start-2 row-start-1 min-w-0 p-0",
+    owner: "col-start-2 col-end-4 row-start-3 p-0 text-muted-foreground",
+    select: "col-start-1 row-start-1 p-0",
+    status: "col-start-2 col-end-4 row-start-4 p-0",
+    updatedAt: "col-start-2 col-end-4 row-start-5 p-0 text-muted-foreground",
+  };
+
+  return cn(
+    "whitespace-normal md:table-cell md:p-2 md:align-middle md:whitespace-nowrap",
+    mobileClasses[columnId],
+    columnId === "actions" && "md:text-right",
+  );
 }
 
 export function ProjectTable({
@@ -236,39 +275,41 @@ export function ProjectTable({
               </SelectGroup>
             </SelectContent>
           </Select>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline">
-                <Columns3 data-icon="inline-start" />
-                显示列
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-40">
-              <DropdownMenuLabel>切换显示列</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuGroup>
-                {table
-                  .getAllLeafColumns()
-                  .filter((column) => column.getCanHide())
-                  .map((column) => (
-                    <DropdownMenuCheckboxItem
-                      key={column.id}
-                      checked={column.getIsVisible()}
-                      onCheckedChange={(checked) => column.toggleVisibility(Boolean(checked))}
-                    >
-                      {{
-                        name: "名称",
-                        description: "描述",
-                        owner: "所有者",
-                        status: "状态",
-                        updatedAt: "更新时间",
-                        createdAt: "创建时间",
-                      }[column.id] ?? column.id}
-                    </DropdownMenuCheckboxItem>
-                  ))}
-              </DropdownMenuGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="hidden md:block">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <Columns3 data-icon="inline-start" />
+                  显示列
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-40">
+                <DropdownMenuLabel>切换显示列</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuGroup>
+                  {table
+                    .getAllLeafColumns()
+                    .filter((column) => column.getCanHide())
+                    .map((column) => (
+                      <DropdownMenuCheckboxItem
+                        key={column.id}
+                        checked={column.getIsVisible()}
+                        onCheckedChange={(checked) => column.toggleVisibility(Boolean(checked))}
+                      >
+                        {{
+                          name: "名称",
+                          description: "描述",
+                          owner: "所有者",
+                          status: "状态",
+                          updatedAt: "更新时间",
+                          createdAt: "创建时间",
+                        }[column.id] ?? column.id}
+                      </DropdownMenuCheckboxItem>
+                    ))}
+                </DropdownMenuGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
           {hasFilters ? (
             <Button
               variant="ghost"
@@ -342,8 +383,8 @@ export function ProjectTable({
             </Card>
           ) : (
             <Card className="py-0">
-              <Table>
-                <TableHeader>
+              <Table aria-label="项目列表" className="block md:table">
+                <TableHeader className="hidden md:table-header-group">
                   {table.getHeaderGroups().map((headerGroup) => (
                     <TableRow key={headerGroup.id}>
                       {headerGroup.headers.map((header) => {
@@ -372,11 +413,15 @@ export function ProjectTable({
                     </TableRow>
                   ))}
                 </TableHeader>
-                <TableBody>
+                <TableBody className="block md:table-row-group">
                   {table.getRowModel().rows.map((row) => (
-                    <TableRow key={row.id} data-state={row.getIsSelected() ? "selected" : undefined}>
+                    <TableRow
+                      key={row.id}
+                      data-state={row.getIsSelected() ? "selected" : undefined}
+                      className="grid grid-cols-[auto_minmax(0,1fr)_auto] gap-x-3 gap-y-2 p-3 md:table-row md:p-0"
+                    >
                       {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id} className={cell.column.id === "actions" ? "text-right" : undefined}>
+                        <TableCell key={cell.id} className={getResponsiveCellClassName(cell.column.id)}>
                           <table.FlexRender cell={cell} />
                         </TableCell>
                       ))}

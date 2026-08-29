@@ -4,13 +4,12 @@ import { useState } from "react";
 
 import { useRouter } from "next/navigation";
 
-import { LoaderCircle } from "lucide-react";
-
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
 import { authClient } from "@/server/auth/client";
 
 export function LoginForm({ nextPath = "/dashboard" }: { nextPath?: string }) {
@@ -23,44 +22,67 @@ export function LoginForm({ nextPath = "/dashboard" }: { nextPath?: string }) {
     setPending(true);
     setError("");
     const formData = new FormData(event.currentTarget);
-    const result = await authClient.signIn.email({
-      email: String(formData.get("email") ?? ""),
-      password: String(formData.get("password") ?? ""),
-      rememberMe: formData.get("remember") === "on",
-    });
-    setPending(false);
-    if (result.error) {
-      setError("邮箱或密码不正确，请重试");
-      return;
+
+    try {
+      const result = await authClient.signIn.email({
+        email: String(formData.get("email") ?? ""),
+        password: String(formData.get("password") ?? ""),
+        rememberMe: formData.get("remember") === "on",
+      });
+      if (result.error) {
+        setError("邮箱或密码不正确，请重试");
+        return;
+      }
+      router.replace(nextPath);
+      router.refresh();
+    } catch {
+      setError("登录服务暂时不可用，请稍后重试");
+    } finally {
+      setPending(false);
     }
-    router.replace(nextPath);
-    router.refresh();
   }
 
   return (
-    <form className="space-y-5" onSubmit={onSubmit}>
-      {error && (
+    <form className="flex flex-col gap-5" onSubmit={onSubmit} aria-busy={pending}>
+      {error ? (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
-      )}
-      <div className="space-y-2">
-        <Label htmlFor="email">邮箱</Label>
-        <Input id="email" name="email" type="email" autoComplete="email" placeholder="admin@example.com" required />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="password">密码</Label>
-        <Input id="password" name="password" type="password" autoComplete="current-password" required />
-      </div>
-      <div className="flex items-center gap-2">
-        <Checkbox id="remember" name="remember" />
-        <Label htmlFor="remember" className="font-normal">
-          保持登录
-        </Label>
-      </div>
+      ) : null}
+      <FieldGroup>
+        <Field data-invalid={Boolean(error)}>
+          <FieldLabel htmlFor="email">邮箱</FieldLabel>
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            autoComplete="email"
+            placeholder="admin@example.com"
+            aria-invalid={Boolean(error)}
+            required
+          />
+        </Field>
+        <Field data-invalid={Boolean(error)}>
+          <FieldLabel htmlFor="password">密码</FieldLabel>
+          <Input
+            id="password"
+            name="password"
+            type="password"
+            autoComplete="current-password"
+            aria-invalid={Boolean(error)}
+            required
+          />
+        </Field>
+        <Field orientation="horizontal">
+          <Checkbox id="remember" name="remember" />
+          <FieldLabel htmlFor="remember" className="font-normal">
+            保持登录
+          </FieldLabel>
+        </Field>
+      </FieldGroup>
       <Button className="w-full" type="submit" disabled={pending}>
-        {pending && <LoaderCircle className="animate-spin" />}
-        登录
+        {pending ? <Spinner data-icon="inline-start" aria-label="正在登录" /> : null}
+        {pending ? "正在登录" : "登录"}
       </Button>
     </form>
   );

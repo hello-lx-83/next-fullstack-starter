@@ -9,6 +9,11 @@ const testEnv = {
   DATABASE_URL: "./data/e2e.db",
 };
 
+const configuredBrowserChannel = process.env.PLAYWRIGHT_BROWSER_CHANNEL;
+const browserChannel =
+  configuredBrowserChannel === "chrome" || configuredBrowserChannel === "msedge" ? configuredBrowserChannel : undefined;
+const browserUse = browserChannel ? { channel: browserChannel } : {};
+
 export default defineConfig({
   testDir: "./tests/e2e",
   globalTeardown: "./tests/e2e/teardown.ts",
@@ -23,11 +28,16 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   projects: [
-    { name: "chromium", use: { ...devices["Desktop Chrome"] }, testIgnore: /mobile\.spec\.ts/ },
+    {
+      name: "chromium",
+      use: { ...devices["Desktop Chrome"], ...browserUse },
+      testIgnore: /mobile\.spec\.ts/,
+    },
     {
       name: "mobile",
       use: {
         ...devices["Pixel 7"],
+        ...browserUse,
         extraHTTPHeaders: { "x-forwarded-for": "127.0.0.2" },
       },
       testMatch: /mobile\.spec\.ts/,

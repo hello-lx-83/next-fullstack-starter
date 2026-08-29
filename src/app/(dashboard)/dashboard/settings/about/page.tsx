@@ -7,11 +7,11 @@ import { Separator } from "@/components/ui/separator";
 import { APP_CONFIG } from "@/config/app-config";
 import { SettingsPageHeader } from "@/features/settings/settings-page-header";
 import { requireUser } from "@/server/auth/session";
-import { getHealthStatus } from "@/server/health";
+import { getIntegrityStatus } from "@/server/health";
 
 export default async function AboutSettingsPage() {
   await requireUser();
-  const health = getHealthStatus();
+  const health = getIntegrityStatus();
 
   return (
     <>

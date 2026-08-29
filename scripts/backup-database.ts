@@ -27,7 +27,9 @@ async function main() {
   const extension = extname(sourcePath) || ".db";
   const baseName = basename(sourcePath, extname(sourcePath));
   const timestamp = new Date().toISOString().replaceAll(":", "-");
-  const backupDirectory = join(dirname(sourcePath), "backups");
+  const backupDirectory = process.env.BACKUP_DIRECTORY
+    ? resolve(process.env.BACKUP_DIRECTORY)
+    : join(dirname(sourcePath), "backups");
   const destinationPath = join(backupDirectory, `${baseName}-${timestamp}${extension}`);
   mkdirSync(backupDirectory, { recursive: true });
 

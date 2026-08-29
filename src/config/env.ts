@@ -2,6 +2,7 @@ import { z } from "zod";
 
 const serverEnvSchema = z.object({
   DATABASE_URL: z.string().min(1).default("./data/app.db"),
+  BACKUP_DIRECTORY: z.string().trim().min(1).optional(),
   BETTER_AUTH_URL: z.url().default("http://localhost:3009"),
   BETTER_AUTH_SECRET: z.string().min(32, "BETTER_AUTH_SECRET 至少需要 32 个字符"),
 });

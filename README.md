@@ -32,6 +32,15 @@ pnpm dev
 
 `pnpm auth:bootstrap` 是幂等命令：账号已存在时只确保姓名、管理员角色和启用状态正确，不会创建演示数据。
 
+首次运行端到端测试前，安装与当前 Playwright 版本匹配的 Chromium：
+
+```bash
+pnpm test:e2e:install
+```
+
+网络受限但系统已安装 Chrome 或 Edge 时，可临时设置 `PLAYWRIGHT_BROWSER_CHANNEL=chrome` 或
+`PLAYWRIGHT_BROWSER_CHANNEL=msedge` 运行测试；CI 和默认本地流程仍使用 Playwright 固定版本的 Chromium。
+
 ## 架构
 
 ```text
@@ -61,6 +70,7 @@ Server Components 直接调用 DAL 查询数据；写操作使用 Server Actions
 - [`docs/product-blueprint.md`](./docs/product-blueprint.md)：面向个人工具的产品定位、信息架构、设置中心、视觉系统与基础设施取舍。
 - [`docs/implementation-prompts.md`](./docs/implementation-prompts.md)：按阶段执行改造的提示词与验收条件。
 - [`docs/new-project-checklist.md`](./docs/new-project-checklist.md)：从 GitHub Template 创建新项目后的改名、配置、裁剪和验收清单。
+- [`docs/production-runbook.md`](./docs/production-runbook.md)：单实例部署、升级、健康检查、备份与回滚流程。
 
 `DESIGN.md` 分析的主要是 Notion 营销站，项目不会直接照搬大号展示标题或营销组件；实际应用以产品蓝图中的中文工具界面规范为准。
 
@@ -86,6 +96,7 @@ pnpm db:backup        # 校验并备份当前 SQLite 数据库
 pnpm db:studio        # 打开 Drizzle Studio
 pnpm auth:bootstrap   # 初始化/校准管理员
 pnpm test:unit        # Vitest
+pnpm test:e2e:install # 首次安装 Playwright Chromium
 pnpm test:e2e         # Playwright
 pnpm test             # 全部测试
 ```
@@ -102,7 +113,7 @@ pnpm test             # 全部测试
 pnpm db:backup
 ```
 
-命令会先执行 `PRAGMA quick_check`，再使用 SQLite 在线备份 API 将副本写入数据库同级的 `backups/` 目录，并再次校验备份。恢复时先停止应用，将当前数据库文件移走，再把选定的备份复制为 `.env` 中 `DATABASE_URL` 指定的文件名。
+命令会先执行 `PRAGMA quick_check`，再使用 SQLite 在线备份 API 创建副本并再次校验。默认写入数据库同级的 `backups/` 目录；生产环境建议通过 `BACKUP_DIRECTORY` 指向另一块磁盘、NAS 或受保护的同步目录。恢复时先停止应用，将当前数据库文件移走，再把选定的备份复制为 `.env` 中 `DATABASE_URL` 指定的文件名。
 
 升级应用或应用新的数据库迁移时，按以下顺序执行：
 
@@ -113,6 +124,15 @@ pnpm build
 ```
 
 迁移失败时不要继续启动新版本。停止应用，保留失败现场，再按上面的恢复流程还原最近一次已校验的备份。
+
+同机备份只能防止误操作，不能抵御磁盘损坏或整机丢失。重要数据至少保留一份异地或离线副本，并定期演练恢复。
+
+## 健康检查
+
+- `GET /api/health/live`：只确认进程可响应，适合高频存活探针。
+- `GET /api/health/ready`：执行轻量数据库查询，适合就绪探针。
+- `GET /api/health`：兼容入口，与 ready 返回相同结果。
+- SQLite `quick_check` 只在“设置 → 关于”和备份流程中低频执行，不作为外部高频探针。
 
 ## 安全、限流与审计
 
@@ -133,6 +153,7 @@ pnpm build
 | 变量 | 用途 |
 | --- | --- |
 | `DATABASE_URL` | SQLite 文件路径，默认 `./data/app.db` |
+| `BACKUP_DIRECTORY` | 可选的独立备份目录；生产环境建议位于另一存储介质 |
 | `BETTER_AUTH_URL` | 应用基础地址，本地默认 `http://localhost:3009` |
 | `BETTER_AUTH_SECRET` | 至少 32 位的会话密钥 |
 | `ADMIN_NAME` | 初始化管理员姓名 |

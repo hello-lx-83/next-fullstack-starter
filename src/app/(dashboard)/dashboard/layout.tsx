@@ -15,9 +15,9 @@ export default async function DashboardLayout({ children }: { children: ReactNod
       <SidebarInset>
         <DashboardHeader />
         <MotionProvider>
-          <main className="flex w-full flex-1 flex-col gap-6 p-4 md:p-6 [html[data-content-layout=centered]_&]:mx-auto [html[data-content-layout=centered]_&]:max-w-7xl">
+          <div className="flex w-full flex-1 flex-col gap-6 p-4 md:p-6 [html[data-content-layout=centered]_&]:mx-auto [html[data-content-layout=centered]_&]:max-w-7xl">
             {children}
-          </main>
+          </div>
         </MotionProvider>
       </SidebarInset>
     </SidebarProvider>
