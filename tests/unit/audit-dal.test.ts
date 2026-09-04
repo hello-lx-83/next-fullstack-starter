@@ -3,21 +3,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { auditListHref, parseAuditListQuery } from "@/features/audit/schema";
 import { requireAdmin } from "@/server/auth/session";
 import { listAuditEvents } from "@/server/dal/audit";
-import { createDatabase } from "@/server/db";
 import { auditEvent, user } from "@/server/db/schema";
 
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { createTestDatabase } from "../helpers/database";
 
 vi.mock("@/server/auth/session", () => ({ requireAdmin: vi.fn() }));
 
 describe("审计列表", () => {
-  let database: ReturnType<typeof createDatabase>;
+  let database: ReturnType<typeof createTestDatabase>;
   beforeEach(async () => {
-    database = createDatabase(":memory:");
-    for (const file of ["0000_abandoned_fat_cobra.sql", "0001_solid_tusk.sql"]) {
-      database.sqlite.exec(readFileSync(resolve("drizzle", file), "utf8").replaceAll("--> statement-breakpoint", ""));
-    }
+    database = createTestDatabase();
     await database.db.insert(user).values({ id: "actor", name: "审计管理员", email: "audit@example.com" });
     await database.db.insert(auditEvent).values(
       Array.from({ length: 23 }, (_, i) => ({
@@ -25,6 +20,8 @@ describe("审计列表", () => {
         action: i % 2 === 0 ? "user.created" : "project.deleted",
         outcome: i % 2 === 0 ? ("success" as const) : ("failure" as const),
         actorUserId: i === 0 ? null : "actor",
+        actorName: i === 0 ? null : "审计管理员",
+        actorEmail: i === 0 ? null : "audit@example.com",
         targetId: i === 0 ? "100%target" : `target-${i}`,
         requestId: `request-${i}`,
         createdAt: new Date(1_700_000_000_000 + i * 1000),

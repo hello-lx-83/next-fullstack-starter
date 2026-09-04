@@ -2,18 +2,12 @@ import "server-only";
 
 import { and, desc, eq, ne } from "drizzle-orm";
 
+import type { SessionDto } from "@/features/sessions/contracts";
+import { recordAuditEvent } from "@/server/audit";
 import { getCurrentSession, requireUser } from "@/server/auth/session";
 import { db } from "@/server/db";
 import { session as authSession } from "@/server/db/schema";
-
-export interface SessionDto {
-  id: string;
-  device: string;
-  createdAt: string;
-  updatedAt: string;
-  expiresAt: string;
-  current: boolean;
-}
+import { getRequestContext } from "@/server/observability/request-context";
 
 function describeUserAgent(value: string | null): string {
   if (!value) return "未知设备";
@@ -60,21 +54,36 @@ export async function listCurrentUserSessions(): Promise<SessionDto[]> {
 
 export async function revokeOwnedSession(
   sessionId: string,
+  database: typeof db = db,
 ): Promise<"revoked" | "unauthorized" | "current" | "not_found"> {
   const currentSession = await getCurrentSession();
   if (!currentSession) return "unauthorized";
   if (sessionId === currentSession.session.id) return "current";
 
-  const [deleted] = await db
-    .delete(authSession)
-    .where(
-      and(
-        eq(authSession.id, sessionId),
-        eq(authSession.userId, currentSession.user.id),
-        ne(authSession.id, currentSession.session.id),
-      ),
-    )
-    .returning({ id: authSession.id });
-
-  return deleted ? "revoked" : "not_found";
+  const context = await getRequestContext();
+  return database.transaction((tx) => {
+    const deleted = tx
+      .delete(authSession)
+      .where(
+        and(
+          eq(authSession.id, sessionId),
+          eq(authSession.userId, currentSession.user.id),
+          ne(authSession.id, currentSession.session.id),
+        ),
+      )
+      .returning({ id: authSession.id })
+      .get();
+    if (!deleted) return "not_found";
+    recordAuditEvent(
+      {
+        action: "auth.session.revoked",
+        actorUserId: currentSession.user.id,
+        targetId: sessionId,
+        targetType: "session",
+        ...context,
+      },
+      tx,
+    );
+    return "revoked";
+  });
 }

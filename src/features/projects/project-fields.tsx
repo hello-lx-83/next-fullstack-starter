@@ -3,7 +3,7 @@
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import type { ProjectDto } from "@/features/projects/schema";
+import type { ProjectDto } from "@/features/projects/contracts";
 import type { ActionResult } from "@/lib/action-result";
 
 export const initialProjectFormState: ActionResult<{ id: string }> = { ok: true };

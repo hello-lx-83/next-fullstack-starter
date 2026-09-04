@@ -35,9 +35,9 @@ import {
   resetUserPasswordAction,
   setUserBannedAction,
 } from "@/features/users/actions";
+import type { UserDto } from "@/features/users/contracts";
 import type { ActionResult } from "@/lib/action-result";
 import { isAdmin } from "@/server/auth/permissions";
-import type { UserDto } from "@/server/dal/users";
 
 export function CreateUserDialog() {
   const [open, setOpen] = useState(false);

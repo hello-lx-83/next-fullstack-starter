@@ -1,4 +1,5 @@
 import { expect, test } from "./fixtures";
+import { createUserThroughUi } from "./users";
 
 test("移动端可打开登录页", async ({ page }) => {
   await page.goto("/login");
@@ -82,11 +83,11 @@ test("移动端用户列表可搜索筛选且无需横向滚动", async ({ page 
   await page.getByLabel("密码").fill("AdminPass123!");
   await page.getByRole("button", { name: "登录" }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
-  const created = await page.request.post("/api/auth/admin/create-user", {
-    data: { email: "mobile-users@example.com", name: "移动端测试用户", password: "UserPass123!" },
-    headers: { origin: "http://localhost:3100" },
+  await createUserThroughUi(page, {
+    email: "mobile-users@example.com",
+    name: "移动端测试用户",
+    password: "UserPass123!",
   });
-  expect(created.ok(), await created.text()).toBe(true);
   await page.goto("/dashboard/users");
   await page.getByRole("textbox", { name: "搜索用户" }).fill("mobile-users@example.com");
   await page.getByRole("button", { name: "搜索", exact: true }).click();

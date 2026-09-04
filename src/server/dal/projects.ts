@@ -1,18 +1,15 @@
+import type { ProjectDto, ProjectPageDto } from "@/features/projects/contracts";
 import "server-only";
 
 import { and, asc, count, desc, eq, inArray, or, type SQL, sql } from "drizzle-orm";
 
-import type {
-  ProjectDto,
-  ProjectInput,
-  ProjectListQuery,
-  ProjectPageDto,
-  ProjectSort,
-} from "@/features/projects/schema";
+import type { ProjectInput, ProjectListQuery, ProjectSort } from "@/features/projects/schema";
+import { recordAuditEvent } from "@/server/audit";
 import { isAdmin } from "@/server/auth/permissions";
 import { getCurrentSession } from "@/server/auth/session";
 import { db } from "@/server/db";
 import { project, user } from "@/server/db/schema";
+import { getRequestContext } from "@/server/observability/request-context";
 
 const projectSelection = {
   id: project.id,
@@ -170,5 +167,20 @@ export async function deleteOwnedArchivedProject(projectId: string, database: ty
   const access =
     and(projectAccess(projectId, session.user.id, isAdmin(session.user.role)), eq(project.status, "archived")) ??
     sql`0`;
-  return database.delete(project).where(access).returning({ id: project.id }).get();
+  const context = await getRequestContext();
+  return database.transaction((tx) => {
+    const deleted = tx.delete(project).where(access).returning({ id: project.id }).get();
+    if (deleted)
+      recordAuditEvent(
+        {
+          action: "project.deleted",
+          actorUserId: session.user.id,
+          targetId: projectId,
+          targetType: "project",
+          ...context,
+        },
+        tx,
+      );
+    return deleted;
+  });
 }

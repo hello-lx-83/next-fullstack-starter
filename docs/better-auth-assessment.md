@@ -14,9 +14,9 @@
 | 数据库会话 | Drizzle + SQLite；未开启 Cookie 会话缓存 | src/server/auth/index.ts、session.ts |
 | 个人安全中心 | 自己的会话列表与撤销、个人资料和密码修改 | src/server/dal/sessions.ts、src/features/profile/、src/features/sessions/ |
 | 用户管理 | 创建普通用户、停用/启用、删除、重置密码并撤销会话 | src/features/users/actions.ts、src/server/dal/users.ts |
-| 管理权限 | Admin 插件只授予 create、set-password；其他管理操作通过项目 DAL；引导流程维护唯一管理员 | src/server/auth/index.ts、single-admin.ts |
-| 请求保护 | 数据库限流；登录/改密单独限流；Origin 与 CSRF 校验 | src/server/auth/index.ts |
-| 审计 | 会话创建 Hook 和业务操作写入自建审计表 | src/server/audit.ts、src/server/dal/audit.ts |
+| 管理权限 | Admin 插件不授予管理写入权限；全部业务管理操作通过项目 DAL；引导流程维护唯一管理员 | src/server/auth/index.ts、single-admin.ts |
+| 请求保护 | 认证 HTTP 入口白名单；登录数据库限流；Origin 与 CSRF 校验 | src/server/auth/index.ts |
+| 审计 | 会话创建 Hook；业务变更与审计共用事务，保存操作者快照 | src/server/audit.ts、src/server/dal/audit.ts |
 
 Admin 插件的默认能力大于当前开放范围。不能为了增加菜单而恢复全部默认权限，否则会改变唯一管理员策略。业务项目的拥有者检查继续在 DAL 和写入查询中执行。
 
@@ -51,7 +51,7 @@ Admin 插件的默认能力大于当前开放范围。不能为了增加菜单�
 - 用户页面为 /dashboard/users；审计日志为 /dashboard/audit。
 - 设置导航移除管理分组，其余设置保留。
 - 仅提供当前用户和审计页面，不保留旧地址。审计页面校验筛选与页码参数。
-- 用户和审计 DAL 保留 requireAdmin，Server Actions 保留独立鉴权。
+- 用户和审计 DAL 保留 requireAdmin，写入操作在 DAL 内独立鉴权。
 - 用户变更刷新新路由，面包屑显示“管理 / 用户”或“管理 / 审计日志”。
 - 复用 Sidebar 包装，不修改 src/components/ui/ 或 src/components/calendar/。
 

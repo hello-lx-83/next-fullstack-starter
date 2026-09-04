@@ -43,8 +43,8 @@ import {
   toggleProjectArchiveAction,
   updateProjectAction,
 } from "@/features/projects/actions";
+import type { ProjectDto } from "@/features/projects/contracts";
 import { initialProjectFormState, ProjectFields } from "@/features/projects/project-fields";
-import type { ProjectDto } from "@/features/projects/schema";
 
 type ProjectDialogMode = "create" | "view" | "edit";
 

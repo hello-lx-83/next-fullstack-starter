@@ -74,6 +74,7 @@ Server Components 直接调用 DAL 查询数据；写操作使用 Server Actions
 - [`docs/product-blueprint.md`](./docs/product-blueprint.md)：面向个人工具的产品定位、信息架构、设置中心、视觉系统与基础设施取舍。
 - [`docs/implementation-prompts.md`](./docs/implementation-prompts.md)：按阶段执行改造的提示词与验收条件。
 - [`docs/new-project-checklist.md`](./docs/new-project-checklist.md)：从 GitHub Template 创建新项目后的改名、配置、裁剪和验收清单。
+- [架构与模块边界](docs/architecture.md)：认证入口、领域契约、事务与测试约定。
 - [`docs/development-workflow.md`](./docs/development-workflow.md)：环境加载规则、测试隔离、CI 门禁与依赖更新约定。
 - [`docs/production-runbook.md`](./docs/production-runbook.md)：单实例部署、升级、健康检查、备份与回滚流程。
 

@@ -21,9 +21,9 @@ import {
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import type { AuditEventPageDto } from "@/features/audit/contracts";
 import { AUDIT_ACTION_LABELS, AUDIT_ACTION_VALUES, type AuditListQuery, auditListHref } from "@/features/audit/schema";
 import { cn } from "@/lib/utils";
-import type { AuditEventPageDto } from "@/server/dal/audit";
 
 const dateFormatter = new Intl.DateTimeFormat("zh-CN", { dateStyle: "medium", timeStyle: "short" });
 

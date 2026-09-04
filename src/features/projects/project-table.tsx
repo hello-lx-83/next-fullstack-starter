@@ -46,8 +46,9 @@ import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "@/components/ui/toast";
 import { setProjectsStatusAction } from "@/features/projects/actions";
+import type { ProjectDto } from "@/features/projects/contracts";
 import { ProjectActions } from "@/features/projects/project-dialogs";
-import { type ProjectDto, type ProjectListQuery, type ProjectSort, projectListHref } from "@/features/projects/schema";
+import { type ProjectListQuery, type ProjectSort, projectListHref } from "@/features/projects/schema";
 import { dataTableFeatures } from "@/lib/data-table-features";
 import { cn } from "@/lib/utils";
 

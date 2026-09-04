@@ -21,11 +21,11 @@ import {
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import type { UserDto } from "@/features/users/contracts";
 import { type UserListQuery, userListHref } from "@/features/users/schema";
 import { UserActions } from "@/features/users/user-management";
 import { cn } from "@/lib/utils";
 import { isAdmin } from "@/server/auth/permissions";
-import type { UserDto } from "@/server/dal/users";
 
 const dateFormatter = new Intl.DateTimeFormat("zh-CN", { dateStyle: "medium" });
 

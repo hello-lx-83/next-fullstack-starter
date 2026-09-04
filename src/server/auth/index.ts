@@ -11,7 +11,7 @@ import { schema } from "@/server/db/schema";
 import { logger } from "@/server/observability/logger";
 
 const fixedAdminRole = defaultAc.newRole({
-  user: ["create", "set-password"],
+  user: [],
   session: [],
 });
 

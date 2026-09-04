@@ -20,7 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/components/ui/toast";
 import { revokeSessionAction } from "@/features/sessions/actions";
-import type { SessionDto } from "@/server/dal/sessions";
+import type { SessionDto } from "@/features/sessions/contracts";
 
 interface SessionListProps {
   sessions: SessionDto[];

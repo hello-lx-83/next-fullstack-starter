@@ -4,11 +4,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { parseUserListQuery } from "@/features/users/schema";
 import { getCurrentSession, requireAdmin } from "@/server/auth/session";
 import { listUsers, setUserBanned } from "@/server/dal/users";
-import { createDatabase } from "@/server/db";
 import { session, user } from "@/server/db/schema";
 
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { createTestDatabase } from "../helpers/database";
 
 vi.mock("@/server/auth/session", () => ({ getCurrentSession: vi.fn(), requireAdmin: vi.fn() }));
 
@@ -19,13 +17,10 @@ function mockSession(id: string, role: "admin" | "user") {
 }
 
 describe("用户 DAL", () => {
-  let database: ReturnType<typeof createDatabase>;
+  let database: ReturnType<typeof createTestDatabase>;
 
   beforeEach(async () => {
-    database = createDatabase(":memory:");
-    database.sqlite.exec(
-      readFileSync(resolve("drizzle/0000_abandoned_fat_cobra.sql"), "utf8").replaceAll("--> statement-breakpoint", ""),
-    );
+    database = createTestDatabase();
     await database.db.insert(user).values([
       { id: "admin", name: "管理员", email: "admin@example.com", role: "admin" },
       { id: "user-1", name: "普通用户", email: "user@example.com" },
@@ -95,3 +90,7 @@ describe("用户 DAL", () => {
     await expect(listUsers(parseUserListQuery({}), database.db)).rejects.toThrow("unauthorized");
   });
 });
+
+vi.mock("@/server/observability/request-context", () => ({
+  getRequestContext: async () => ({ requestId: "test-request", userAgent: null }),
+}));

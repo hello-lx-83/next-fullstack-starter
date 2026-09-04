@@ -1,20 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { enforceSingleAdmin } from "@/server/auth/single-admin";
-import { createDatabase } from "@/server/db";
 import { user } from "@/server/db/schema";
 
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { createTestDatabase } from "../helpers/database";
 
 describe("唯一超级管理员", () => {
-  let database: ReturnType<typeof createDatabase>;
+  let database: ReturnType<typeof createTestDatabase>;
 
   beforeEach(async () => {
-    database = createDatabase(":memory:");
-    database.sqlite.exec(
-      readFileSync(resolve("drizzle/0000_abandoned_fat_cobra.sql"), "utf8").replaceAll("--> statement-breakpoint", ""),
-    );
+    database = createTestDatabase();
     await database.db.insert(user).values([
       { id: "admin-old", name: "旧管理员", email: "old@example.com", role: "admin" },
       { id: "admin-main", name: "待校准", email: "admin@example.com", role: "admin", banned: true },

@@ -98,6 +98,8 @@ export const auditEvent = sqliteTable(
       .notNull()
       .default("success"),
     actorUserId: text("actor_user_id").references(() => user.id, { onDelete: "set null" }),
+    actorName: text("actor_name"),
+    actorEmail: text("actor_email"),
     targetType: text("target_type"),
     targetId: text("target_id"),
     requestId: text("request_id"),

@@ -11,11 +11,9 @@ import {
   toggleOwnedProjectArchive,
   updateOwnedProject,
 } from "@/server/dal/projects";
-import { createDatabase } from "@/server/db";
 import { project, user } from "@/server/db/schema";
 
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { createTestDatabase } from "../helpers/database";
 
 vi.mock("@/server/auth/session", () => ({ getCurrentSession: vi.fn() }));
 
@@ -26,12 +24,10 @@ function mockSession(id: string, role: "admin" | "user" = "user") {
 }
 
 describe("Projects DAL", () => {
-  let database: ReturnType<typeof createDatabase>;
+  let database: ReturnType<typeof createTestDatabase>;
 
   beforeEach(async () => {
-    database = createDatabase(":memory:");
-    const migrationPath = resolve("drizzle/0000_abandoned_fat_cobra.sql");
-    database.sqlite.exec(readFileSync(migrationPath, "utf8").replaceAll("--> statement-breakpoint", ""));
+    database = createTestDatabase();
     await database.db.insert(user).values([
       { id: "u1", name: "用户一", email: "u1@example.com" },
       { id: "u2", name: "用户二", email: "u2@example.com" },
@@ -119,3 +115,7 @@ describe("Projects DAL", () => {
     expect((await deleteOwnedArchivedProject(created.id, database.db))?.id).toBe(created.id);
   });
 });
+
+vi.mock("@/server/observability/request-context", () => ({
+  getRequestContext: async () => ({ requestId: "test-request", userAgent: null }),
+}));

@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 
 import { expect, test } from "./fixtures";
+import { createUserThroughUi } from "./users";
 
 async function openAdminUsers(page: Page) {
   await page.getByRole("link", { name: "用户", exact: true }).click();
@@ -206,22 +207,18 @@ test("登录接口会对连续失败请求限流", async ({ request }) => {
 });
 
 test("用户列表支持搜索、筛选、分页和删除后的页码回退", async ({ page }, testInfo) => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
   await page.goto("/login");
   await page.getByLabel("邮箱").fill("admin@example.com");
   await page.getByLabel("密码").fill("AdminPass123!");
   await page.getByRole("button", { name: "登录" }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
   for (let i = 0; i < 11; i += 1) {
-    const response = await page.request.post("/api/auth/admin/create-user", {
-      data: {
-        email: `paging-${i}@example.com`,
-        name: `分页测试${String(i).padStart(2, "0")}`,
-        password: "UserPass123!",
-      },
-      headers: { origin: "http://localhost:3100" },
+    await createUserThroughUi(page, {
+      email: `paging-${i}@example.com`,
+      name: `分页测试${String(i).padStart(2, "0")}`,
+      password: "UserPass123!",
     });
-    expect(response.ok(), await response.text()).toBe(true);
   }
   await page.goto("/dashboard/users");
   await page.getByRole("textbox", { name: "搜索用户" }).fill("分页测试");

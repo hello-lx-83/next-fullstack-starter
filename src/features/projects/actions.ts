@@ -4,8 +4,6 @@ import { revalidatePath } from "next/cache";
 
 import { projectBulkStatusSchema, projectIdSchema, projectInputSchema } from "@/features/projects/schema";
 import type { ActionResult } from "@/lib/action-result";
-import { recordAuditEventFromRequest } from "@/server/audit-request";
-import { getCurrentSession } from "@/server/auth/session";
 import {
   createProject,
   deleteOwnedArchivedProject,
@@ -115,15 +113,6 @@ export async function deleteProjectAction(projectId: string): Promise<ActionResu
     return { ok: false, message: "删除项目失败，请稍后重试" };
   }
   if (!deleted) return { ok: false, message: "只有已归档且有权限的项目可以永久删除" };
-  const session = await getCurrentSession();
-  if (session) {
-    await recordAuditEventFromRequest({
-      action: "project.deleted",
-      actorUserId: session.user.id,
-      targetId: parsed.data,
-      targetType: "project",
-    });
-  }
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/projects");
   return { ok: true };

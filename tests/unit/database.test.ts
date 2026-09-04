@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { createDatabase } from "@/server/db";
+import { createDatabase } from "@/server/db/factory";
 
 describe("SQLite 连接", () => {
   const connections: ReturnType<typeof createDatabase>[] = [];
