@@ -42,7 +42,7 @@ pnpm test:e2e
 pnpm build
 ```
 
-GitHub Actions 会在 `main` 推送和 Pull Request 上执行静态检查、类型检查、单元测试和构建。耗时较长的 E2E 仅在推送到 `main` 或手动触发工作流时运行。首次创建模板仓库时，在 GitHub 设置中将基础 CI 设为分支保护的必需检查。
+GitHub Actions 在 `main` 推送、Pull Request 和手动触发时均执行检查：Windows / Ubuntu 运行环境校验、静态检查、类型检查、单元测试、迁移和构建，Ubuntu 运行 E2E 并上传诊断报告。在 GitHub 分支保护中将两个 `quality` 矩阵检查及 `e2e` 设为必需检查，详见 [`development-workflow.md`](./development-workflow.md)。
 
 ## 何时再考虑初始化脚本
 

@@ -1,0 +1,33 @@
+import { expect, test } from "./fixtures";
+
+test("审计列表统一筛选分页并支持空状态", async ({ page }, testInfo) => {
+  await page.goto("/login");
+  await page.getByLabel("邮箱").fill("admin@example.com");
+  await page.getByLabel("密码").fill("AdminPass123!");
+  await page.getByRole("button", { name: "登录" }).click();
+  await expect(page).toHaveURL(/\/dashboard$/);
+  await page.goto("/dashboard/audit");
+  await expect(page.getByRole("heading", { name: "审计日志", exact: true })).toHaveCount(1);
+  await page.getByRole("textbox", { name: "搜索审计日志" }).fill("ADMIN@EXAMPLE.COM");
+  await page.getByRole("button", { name: "搜索", exact: true }).click();
+  await page.getByRole("combobox", { name: "筛选操作类型" }).click();
+  await page.getByRole("option", { name: "会话创建", exact: true }).click();
+  await page.getByRole("combobox", { name: "每页日志数" }).click();
+  await page.getByRole("option", { name: "每页 10 条" }).click();
+  await page.getByRole("combobox", { name: "日志排序" }).click();
+  await page.getByRole("option", { name: "最早记录" }).click();
+  await page.reload();
+  await expect(page.getByRole("table", { name: "审计日志列表" })).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "日志排序" })).toContainText("最早记录");
+  await page.screenshot({ path: testInfo.outputPath("audit-desktop.png"), fullPage: true });
+  await page.getByRole("combobox", { name: "筛选操作结果" }).click();
+  await page.getByRole("option", { name: "失败", exact: true }).click();
+  await expect(page.getByText("没有匹配的审计记录")).toBeVisible();
+  await expect(page.getByRole("link", { name: "前往下一页" })).toHaveAttribute("aria-disabled", "true");
+  await page.getByRole("button", { name: "清除筛选" }).click();
+  await expect(page.getByRole("textbox", { name: "搜索审计日志" })).toHaveValue("");
+  await expect(page.getByRole("table", { name: "审计日志列表" })).toBeVisible();
+  await page.goto("/dashboard/audit?q=nonexistent&outcome=failure&pageSize=10&page=99");
+  await expect(page).toHaveURL("/dashboard/audit?q=nonexistent&outcome=failure&pageSize=10");
+  await expect(page.getByText("第 1 / 1 页")).toBeVisible();
+});

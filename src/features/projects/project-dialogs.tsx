@@ -1,11 +1,10 @@
 "use client";
 
-import { type ReactNode, useActionState, useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { useActionState, useCallback, useEffect, useRef, useState, useTransition } from "react";
 
 import { useRouter } from "next/navigation";
 
-import { ArchiveRestore, Ellipsis, Eye, Pencil, Save, Trash2 } from "lucide-react";
-import { toast } from "sonner";
+import { ArchiveRestore, Ellipsis, Eye, Pencil, Plus, Save, Trash2 } from "lucide-react";
 
 import {
   AlertDialog,
@@ -37,6 +36,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Spinner } from "@/components/ui/spinner";
+import { toast } from "@/components/ui/toast";
 import {
   createProjectAction,
   deleteProjectAction,
@@ -57,13 +57,11 @@ const dialogCopy: Record<ProjectDialogMode, { title: string; description: string
 export function ProjectDialog({
   mode,
   project,
-  trigger,
   open: controlledOpen,
   onOpenChange,
 }: {
   mode: ProjectDialogMode;
   project?: ProjectDto;
-  trigger?: ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }) {
@@ -88,13 +86,18 @@ export function ProjectDialog({
     if (!state.ok || !state.data) return;
     if (mode === "create") formRef.current?.reset();
     setOpen(false);
-    toast.success(mode === "create" ? "项目已创建" : "项目已更新");
+    toast.add({ type: "success", title: mode === "create" ? "项目已创建" : "项目已更新" });
     router.refresh();
   }, [mode, router, setOpen, state]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      {trigger ? <DialogTrigger asChild>{trigger}</DialogTrigger> : null}
+      {mode === "create" ? (
+        <DialogTrigger render={<Button />}>
+          <Plus data-icon="inline-start" />
+          新建项目
+        </DialogTrigger>
+      ) : null}
       <DialogContent className="max-h-[calc(100dvh-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] sm:max-w-lg">
         <form ref={formRef} action={formAction} className="contents">
           <DialogHeader>
@@ -110,11 +113,7 @@ export function ProjectDialog({
             />
           </div>
           <DialogFooter>
-            <DialogClose asChild>
-              <Button type="button" variant="outline">
-                {readOnly ? "关闭" : "取消"}
-              </Button>
-            </DialogClose>
+            <DialogClose render={<Button type="button" variant="outline" />}>{readOnly ? "关闭" : "取消"}</DialogClose>
             {readOnly ? null : (
               <Button type="submit" disabled={pending}>
                 {pending ? <Spinner data-icon="inline-start" /> : <Save data-icon="inline-start" />}
@@ -139,13 +138,13 @@ export function ProjectActions({ project }: { project: ProjectDto }) {
       try {
         const result = await toggleProjectArchiveAction(project.id);
         if (!result.ok) {
-          toast.error(result.message);
+          toast.add({ type: "error", title: result.message });
           return;
         }
-        toast.success(project.status === "active" ? "项目已归档" : "项目已恢复");
+        toast.add({ type: "success", title: project.status === "active" ? "项目已归档" : "项目已恢复" });
         router.refresh();
       } catch {
-        toast.error("更新项目状态失败，请稍后重试");
+        toast.add({ type: "error", title: "更新项目状态失败，请稍后重试" });
       }
     });
   }
@@ -155,14 +154,14 @@ export function ProjectActions({ project }: { project: ProjectDto }) {
       try {
         const result = await deleteProjectAction(project.id);
         if (!result.ok) {
-          toast.error(result.message);
+          toast.add({ type: "error", title: result.message });
           return;
         }
         setDeleteOpen(false);
-        toast.success("项目已永久删除");
+        toast.add({ type: "success", title: "项目已永久删除" });
         router.refresh();
       } catch {
-        toast.error("删除项目失败，请稍后重试");
+        toast.add({ type: "error", title: "删除项目失败，请稍后重试" });
       }
     });
   }
@@ -170,30 +169,32 @@ export function ProjectActions({ project }: { project: ProjectDto }) {
   return (
     <>
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon-sm" disabled={pending} aria-label={`打开“${project.name}”的操作菜单`}>
-            {pending ? <Spinner /> : <Ellipsis />}
-          </Button>
+        <DropdownMenuTrigger
+          render={
+            <Button variant="ghost" size="icon-sm" disabled={pending} aria-label={`打开“${project.name}”的操作菜单`} />
+          }
+        >
+          {pending ? <Spinner /> : <Ellipsis />}
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-36">
           <DropdownMenuGroup>
-            <DropdownMenuItem onSelect={() => setDialogMode("view")}>
+            <DropdownMenuItem onClick={() => setDialogMode("view")}>
               <Eye />
               查看
             </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => setDialogMode("edit")}>
+            <DropdownMenuItem onClick={() => setDialogMode("edit")}>
               <Pencil />
               编辑
             </DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
-            <DropdownMenuItem onSelect={toggleArchive}>
+            <DropdownMenuItem onClick={toggleArchive}>
               <ArchiveRestore />
               {project.status === "active" ? "归档" : "恢复"}
             </DropdownMenuItem>
             {project.status === "archived" ? (
-              <DropdownMenuItem onSelect={() => setDeleteOpen(true)}>
+              <DropdownMenuItem onClick={() => setDeleteOpen(true)}>
                 <Trash2 />
                 删除
               </DropdownMenuItem>
@@ -221,7 +222,7 @@ export function ProjectActions({ project }: { project: ProjectDto }) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction variant="destructive" onClick={deleteProject}>
+            <AlertDialogAction disabled={pending} variant="destructive" onClick={deleteProject}>
               确认删除
             </AlertDialogAction>
           </AlertDialogFooter>

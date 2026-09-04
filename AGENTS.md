@@ -21,6 +21,8 @@ Before any Next.js work, read the relevant documentation in `node_modules/next/d
 
 ## shadcn/ui
 
+The project uses shadcn/ui Base UI components with the Nova style (`base-nova`). Use `render` composition, not `asChild`. Do not introduce Radix UI, cmdk, or Vaul dependencies; use Base UI primitives and the existing Base UI Toast component.
+
 Use the shadcn skill for work involving shadcn/ui composition or styling. Inspect local wrappers before use. Do not modify files in `src/components/ui/` or `src/components/calendar/`; style and compose them at call sites.
 
 ## Package manager and commands

@@ -19,7 +19,7 @@ import {
   SIDEBAR_COLLAPSIBLE_VALUES,
   SIDEBAR_VARIANT_VALUES,
 } from "./layout";
-import { THEME_MODE_VALUES, THEME_PRESET_VALUES } from "./theme";
+import { TEXT_SIZE_OPTIONS, THEME_COLOR_OPTIONS, THEME_MODE_VALUES } from "./theme";
 
 export type PreferencePersistence = "none" | "client-cookie" | "server-cookie" | "localStorage";
 
@@ -60,18 +60,25 @@ export const PREFERENCE_REGISTRY = {
     attribute: "data-theme-mode",
   }),
 
-  theme_preset: definePreference({
-    values: THEME_PRESET_VALUES,
-    defaultValue: "default",
-    persistence: "client-cookie",
-    attribute: "data-theme-preset",
-  }),
-
   font: definePreference({
     values: fontKeys,
     defaultValue: "geist",
     persistence: "client-cookie",
     attribute: "data-font",
+  }),
+
+  theme_color: definePreference({
+    values: THEME_COLOR_OPTIONS.map((option) => option.value),
+    defaultValue: "neutral",
+    persistence: "client-cookie",
+    attribute: "data-theme-color",
+  }),
+
+  text_size: definePreference({
+    values: TEXT_SIZE_OPTIONS.map((option) => option.value),
+    defaultValue: "default",
+    persistence: "client-cookie",
+    attribute: "data-text-size",
   }),
 
   content_layout: definePreference({

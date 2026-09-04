@@ -27,7 +27,33 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
 
 export const auditListQuerySchema = z.object({
   action: z.union([z.literal("all"), auditActionSchema]).catch("all"),
-  page: z.coerce.number().int().min(1).catch(1),
+  q: z.string().trim().max(100).catch(""),
+  outcome: z.enum(["all", "success", "failure"]).catch("all"),
+  sort: z.enum(["created-desc", "created-asc"]).catch("created-desc"),
+  page: z.coerce.number().int().min(1).max(1_000_000).catch(1),
+  pageSize: z.coerce
+    .number()
+    .pipe(z.union([z.literal(10), z.literal(20), z.literal(50)]))
+    .catch(20),
 });
 
 export type AuditListQuery = z.infer<typeof auditListQuerySchema>;
+
+export function parseAuditListQuery(params: Record<string, string | string[] | undefined>): AuditListQuery {
+  return auditListQuerySchema.parse(
+    Object.fromEntries(Object.entries(params).map(([key, value]) => [key, Array.isArray(value) ? value[0] : value])),
+  );
+}
+
+export function auditListHref(query: AuditListQuery, overrides: Partial<AuditListQuery> = {}) {
+  const next = { ...query, ...overrides };
+  const params = new URLSearchParams();
+  if (next.q) params.set("q", next.q);
+  if (next.action !== "all") params.set("action", next.action);
+  if (next.outcome !== "all") params.set("outcome", next.outcome);
+  if (next.sort !== "created-desc") params.set("sort", next.sort);
+  if (next.page > 1) params.set("page", String(next.page));
+  if (next.pageSize !== 20) params.set("pageSize", String(next.pageSize));
+  const search = params.toString();
+  return `/dashboard/audit${search ? `?${search}` : ""}`;
+}

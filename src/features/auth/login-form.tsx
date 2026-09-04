@@ -43,7 +43,11 @@ export function LoginForm({ nextPath = "/dashboard" }: { nextPath?: string }) {
   }
 
   return (
-    <form className="flex flex-col gap-5" onSubmit={onSubmit} aria-busy={pending}>
+    <form className="flex flex-col gap-6" onSubmit={onSubmit} aria-busy={pending}>
+      <div className="flex flex-col items-center gap-1 text-center">
+        <h1 className="font-bold font-heading text-2xl">登录工作台</h1>
+        <p className="text-balance text-muted-foreground text-sm">使用管理员创建的账号继续</p>
+      </div>
       {error ? (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
@@ -79,11 +83,13 @@ export function LoginForm({ nextPath = "/dashboard" }: { nextPath?: string }) {
             保持登录
           </FieldLabel>
         </Field>
+        <Field>
+          <Button type="submit" disabled={pending}>
+            {pending ? <Spinner data-icon="inline-start" aria-label="正在登录" /> : null}
+            {pending ? "正在登录" : "登录"}
+          </Button>
+        </Field>
       </FieldGroup>
-      <Button className="w-full" type="submit" disabled={pending}>
-        {pending ? <Spinner data-icon="inline-start" aria-label="正在登录" /> : null}
-        {pending ? "正在登录" : "登录"}
-      </Button>
     </form>
   );
 }

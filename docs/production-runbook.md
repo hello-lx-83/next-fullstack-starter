@@ -11,10 +11,13 @@
 - `BACKUP_DIRECTORY` 指向另一块磁盘、NAS 或受保护的同步目录。
 - 反向代理只转发实际需要的请求头，并覆盖客户端传入的真实 IP 头。
 
+维护命令与应用进程均应显式设置 `NODE_ENV=production`，确保迁移、备份和应用加载相同的生产环境配置；PowerShell 使用 `$env:NODE_ENV = "production"`，POSIX shell 使用 `export NODE_ENV=production`。
+
 ## 首次部署
 
 ```bash
 pnpm install --frozen-lockfile
+pnpm env:check
 pnpm db:migrate
 pnpm auth:bootstrap
 pnpm build

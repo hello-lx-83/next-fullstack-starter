@@ -1,13 +1,11 @@
 import "server-only";
 
-import { count, desc, eq } from "drizzle-orm";
+import { and, asc, count, desc, eq, or, type SQL, sql } from "drizzle-orm";
 
-import type { AuditAction, AuditListQuery } from "@/features/audit/schema";
+import { type AuditAction, type AuditListQuery, auditListQuerySchema } from "@/features/audit/schema";
 import { requireAdmin } from "@/server/auth/session";
 import { db } from "@/server/db";
 import { auditEvent, user } from "@/server/db/schema";
-
-const PAGE_SIZE = 20;
 
 export interface AuditEventDto {
   id: string;
@@ -28,15 +26,33 @@ export interface AuditEventPageDto {
   total: number;
 }
 
-export async function listAuditEvents(query: AuditListQuery): Promise<AuditEventPageDto> {
+export async function listAuditEvents(input: AuditListQuery, database: typeof db = db): Promise<AuditEventPageDto> {
   await requireAdmin();
 
-  const condition = query.action === "all" ? undefined : eq(auditEvent.action, query.action);
-  const [{ value: total }] = await db.select({ value: count() }).from(auditEvent).where(condition);
-  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const query = auditListQuerySchema.parse(input);
+  const conditions: SQL[] = [];
+  if (query.action !== "all") conditions.push(eq(auditEvent.action, query.action));
+  if (query.outcome !== "all") conditions.push(eq(auditEvent.outcome, query.outcome));
+  if (query.q) {
+    const match = or(
+      sql`instr(lower(${user.name}), lower(${query.q})) > 0`,
+      sql`instr(lower(${user.email}), lower(${query.q})) > 0`,
+      sql`instr(lower(${auditEvent.targetId}), lower(${query.q})) > 0`,
+      sql`instr(lower(${auditEvent.targetType}), lower(${query.q})) > 0`,
+      sql`instr(lower(${auditEvent.requestId}), lower(${query.q})) > 0`,
+    );
+    if (match) conditions.push(match);
+  }
+  const condition = and(...conditions);
+  const [{ value: total }] = await database
+    .select({ value: count() })
+    .from(auditEvent)
+    .leftJoin(user, eq(auditEvent.actorUserId, user.id))
+    .where(condition);
+  const pageCount = Math.max(1, Math.ceil(total / query.pageSize));
   const page = Math.min(query.page, pageCount);
 
-  const rows = await db
+  const rows = await database
     .select({
       id: auditEvent.id,
       action: auditEvent.action,
@@ -51,9 +67,9 @@ export async function listAuditEvents(query: AuditListQuery): Promise<AuditEvent
     .from(auditEvent)
     .leftJoin(user, eq(auditEvent.actorUserId, user.id))
     .where(condition)
-    .orderBy(desc(auditEvent.createdAt), desc(auditEvent.id))
-    .limit(PAGE_SIZE)
-    .offset((page - 1) * PAGE_SIZE);
+    .orderBy(query.sort === "created-asc" ? asc(auditEvent.createdAt) : desc(auditEvent.createdAt), desc(auditEvent.id))
+    .limit(query.pageSize)
+    .offset((page - 1) * query.pageSize);
 
   return {
     events: rows.map((row) => ({

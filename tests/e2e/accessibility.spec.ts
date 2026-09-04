@@ -1,5 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect, type Page, test } from "@playwright/test";
+import type { Page } from "@playwright/test";
+
+import { expect, test } from "./fixtures";
 
 async function expectNoAccessibilityViolations(page: Page) {
   const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
@@ -27,7 +29,7 @@ test("核心工作台页面通过自动化无障碍检查", async ({ page }) => 
   await page.getByRole("button", { name: "登录" }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
 
-  for (const path of ["/dashboard", "/dashboard/projects", "/dashboard/settings/data"]) {
+  for (const path of ["/dashboard", "/dashboard/projects", "/dashboard/settings/profile"]) {
     await page.goto(path);
     await expect(page.getByRole("main")).toBeVisible();
     await expectNoAccessibilityViolations(page);

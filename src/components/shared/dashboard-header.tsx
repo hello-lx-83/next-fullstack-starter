@@ -36,9 +36,7 @@ export function DashboardHeader() {
                 <Fragment key={`${item.url ?? "current"}-${item.title}`}>
                   <BreadcrumbItem className={isCurrent ? undefined : "hidden sm:inline-flex"}>
                     {item.url && !isCurrent ? (
-                      <BreadcrumbLink asChild>
-                        <Link href={item.url}>{item.title}</Link>
-                      </BreadcrumbLink>
+                      <BreadcrumbLink render={<Link href={item.url} />}>{item.title}</BreadcrumbLink>
                     ) : (
                       <BreadcrumbPage>{item.title}</BreadcrumbPage>
                     )}

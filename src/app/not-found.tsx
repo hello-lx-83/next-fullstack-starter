@@ -12,11 +12,9 @@ export default function NotFound() {
         <h1 className="font-semibold text-2xl">页面不存在</h1>
         <p className="max-w-md text-muted-foreground">你访问的页面不存在，或已经被移动。</p>
       </div>
-      <Button asChild>
-        <Link href="/">
-          <House />
-          返回首页
-        </Link>
+      <Button render={<Link href="/" />} nativeButton={false} role="link">
+        <House />
+        返回首页
       </Button>
     </main>
   );

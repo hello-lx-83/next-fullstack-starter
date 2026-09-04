@@ -1,9 +1,8 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 
 import { Laptop, ShieldCheck } from "lucide-react";
-import { toast } from "sonner";
 
 import {
   AlertDialog,
@@ -19,6 +18,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { toast } from "@/components/ui/toast";
 import { revokeSessionAction } from "@/features/sessions/actions";
 import type { SessionDto } from "@/server/dal/sessions";
 
@@ -35,23 +35,22 @@ function formatDate(value: string): string {
 }
 
 function RevokeSessionButton({ sessionId }: { sessionId: string }) {
+  const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
 
   function revoke() {
     startTransition(async () => {
       const result = await revokeSessionAction(sessionId);
-      if (result.ok) toast.success("会话已撤销");
-      else toast.error(result.message);
+      if (result.ok) {
+        setOpen(false);
+        toast.add({ type: "success", title: "会话已撤销" });
+      } else toast.add({ type: "error", title: result.message });
     });
   }
 
   return (
-    <AlertDialog>
-      <AlertDialogTrigger asChild>
-        <Button size="sm" type="button" variant="outline">
-          撤销
-        </Button>
-      </AlertDialogTrigger>
+    <AlertDialog open={open} onOpenChange={setOpen}>
+      <AlertDialogTrigger render={<Button size="sm" type="button" variant="outline" />}>撤销</AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>撤销这个登录会话？</AlertDialogTitle>

@@ -1,15 +1,8 @@
 import Database from "better-sqlite3";
 
+import { loadLocalEnv } from "./lib/load-env";
 import { existsSync, mkdirSync } from "node:fs";
 import { basename, dirname, extname, join, resolve } from "node:path";
-
-function loadLocalEnv() {
-  if (existsSync(".env.local")) {
-    process.loadEnvFile(".env.local");
-  } else if (existsSync(".env")) {
-    process.loadEnvFile(".env");
-  }
-}
 
 function assertHealthy(database: Database.Database, label: string) {
   const result = database.pragma("quick_check", { simple: true });

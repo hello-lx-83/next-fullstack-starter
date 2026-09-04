@@ -7,7 +7,7 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { isAdmin } from "@/server/auth/permissions";
 import { requireUser } from "@/server/auth/session";
 
-export default async function DashboardLayout({ children }: { children: ReactNode }) {
+export default async function DashboardLayout({ children, modal }: { children: ReactNode; modal?: ReactNode }) {
   const session = await requireUser();
   return (
     <SidebarProvider>
@@ -20,6 +20,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
           </div>
         </MotionProvider>
       </SidebarInset>
+      {modal}
     </SidebarProvider>
   );
 }

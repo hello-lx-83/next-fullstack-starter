@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 import { ChevronDown, Settings2 } from "lucide-react";
 
@@ -15,35 +15,53 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { getVisibleSettingsNavigation, isNavigationItemActive } from "@/config/navigation";
+import { isNavigationItemActive, SETTINGS_NAVIGATION } from "@/config/navigation";
+import { useSettingsGuard } from "@/features/settings/settings-guard";
 
-export function SettingsNavigation({ isAdmin }: { isAdmin: boolean }) {
+export function SettingsNavigation({ replace = false }: { replace?: boolean }) {
+  const { requestLeave } = useSettingsGuard();
+  const router = useRouter();
   const pathname = usePathname();
-  const groups = getVisibleSettingsNavigation(isAdmin);
+  const groups = SETTINGS_NAVIGATION;
   const currentItem = groups.flatMap((group) => group.items).find((item) => isNavigationItemActive(pathname, item));
 
   return (
     <>
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" className="w-full justify-between md:hidden">
-            <Settings2 data-icon="inline-start" />
-            <span className="truncate">{currentItem?.title ?? "选择设置"}</span>
-            <ChevronDown data-icon="inline-end" />
-          </Button>
+        <DropdownMenuTrigger render={<Button variant="outline" className="w-full justify-between md:hidden" />}>
+          <Settings2 data-icon="inline-start" />
+          <span className="truncate">{currentItem?.title ?? "选择设置"}</span>
+          <ChevronDown data-icon="inline-end" />
         </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-(--radix-dropdown-menu-trigger-width)" align="start">
+        <DropdownMenuContent className="w-(--anchor-width)" align="start">
           {groups.map((group, groupIndex) => (
             <div key={group.title}>
               {groupIndex > 0 && <DropdownMenuSeparator />}
               <DropdownMenuGroup>
                 <DropdownMenuLabel>{group.title}</DropdownMenuLabel>
                 {group.items.map((item) => (
-                  <DropdownMenuItem key={item.url} asChild>
-                    <Link href={item.url} aria-current={isNavigationItemActive(pathname, item) ? "page" : undefined}>
-                      <item.icon />
-                      {item.title}
-                    </Link>
+                  <DropdownMenuItem
+                    key={item.url}
+                    render={
+                      <Link
+                        href={item.url}
+                        replace={replace}
+                        scroll={false}
+                        onNavigate={(event) => {
+                          event.preventDefault();
+                          requestLeave(() =>
+                            replace
+                              ? router.replace(item.url, { scroll: false })
+                              : router.push(item.url, { scroll: false }),
+                          );
+                        }}
+                        aria-current={isNavigationItemActive(pathname, item) ? "page" : undefined}
+                      />
+                    }
+                    nativeButton={false}
+                  >
+                    <item.icon />
+                    {item.title}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuGroup>
@@ -61,16 +79,31 @@ export function SettingsNavigation({ isAdmin }: { isAdmin: boolean }) {
 
               return (
                 <Button
-                  asChild
                   className="w-full justify-start"
                   key={item.url}
                   size="sm"
                   variant={isActive ? "secondary" : "ghost"}
+                  render={
+                    <Link
+                      href={item.url}
+                      replace={replace}
+                      scroll={false}
+                      onNavigate={(event) => {
+                        event.preventDefault();
+                        requestLeave(() =>
+                          replace
+                            ? router.replace(item.url, { scroll: false })
+                            : router.push(item.url, { scroll: false }),
+                        );
+                      }}
+                      aria-current={isActive ? "page" : undefined}
+                    />
+                  }
+                  nativeButton={false}
+                  role="link"
                 >
-                  <Link href={item.url} aria-current={isActive ? "page" : undefined}>
-                    <item.icon data-icon="inline-start" />
-                    {item.title}
-                  </Link>
+                  <item.icon data-icon="inline-start" />
+                  {item.title}
                 </Button>
               );
             })}

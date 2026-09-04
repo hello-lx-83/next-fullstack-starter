@@ -5,7 +5,7 @@
 ## 技术栈
 
 - Next.js 16 App Router、React 19、TypeScript
-- Tailwind CSS 4、shadcn/ui
+- Tailwind CSS 4、shadcn/ui（Base UI / Nova）
 - SQLite、Drizzle ORM、Drizzle Kit
 - Better Auth 邮箱密码认证与 `admin/user` RBAC
 - 持久化认证限流、最小审计事件、结构化服务端日志与安全响应头
@@ -14,12 +14,14 @@
 
 ## 本地启动
 
-要求 Node.js 22 或更高版本，以及 pnpm 10.20.0。
+要求 Node.js 22 或更高版本，以及 pnpm 10.20.0。默认验证版本由 `.node-version` 声明，CI 覆盖 Windows 和 Ubuntu。
 
 ```bash
 pnpm install
 cp .env.example .env
 ```
+
+PowerShell 中可使用 `Copy-Item .env.example .env` 复制配置文件。
 
 编辑 `.env`，至少替换 `BETTER_AUTH_SECRET` 和 `ADMIN_PASSWORD`。随后初始化数据库和首个管理员：
 
@@ -52,7 +54,7 @@ src/
 │  ├─ db/                 # Drizzle schema 与 SQLite 连接
 │  └─ dal/                # 受鉴权保护的数据访问层
 ├─ components/
-│  ├─ ui/                 # shadcn/ui 基础组件
+│  ├─ ui/                 # shadcn/ui（Base UI / Nova） 基础组件
 │  └─ shared/             # 应用级共享组件
 ├─ config/                # 应用与环境配置
 └─ lib/                   # 通用类型和工具
@@ -66,10 +68,13 @@ Server Components 直接调用 DAL 查询数据；写操作使用 Server Actions
 
 ## 产品与界面设计
 
+- [`docs/appearance.md`](./docs/appearance.md)：基础外观配置、字体字号与模板配置入口。
+
 - [`DESIGN.md`](./DESIGN.md)：下载并纳入项目管理的 Notion 视觉语言参考。
 - [`docs/product-blueprint.md`](./docs/product-blueprint.md)：面向个人工具的产品定位、信息架构、设置中心、视觉系统与基础设施取舍。
 - [`docs/implementation-prompts.md`](./docs/implementation-prompts.md)：按阶段执行改造的提示词与验收条件。
 - [`docs/new-project-checklist.md`](./docs/new-project-checklist.md)：从 GitHub Template 创建新项目后的改名、配置、裁剪和验收清单。
+- [`docs/development-workflow.md`](./docs/development-workflow.md)：环境加载规则、测试隔离、CI 门禁与依赖更新约定。
 - [`docs/production-runbook.md`](./docs/production-runbook.md)：单实例部署、升级、健康检查、备份与回滚流程。
 
 `DESIGN.md` 分析的主要是 Notion 营销站，项目不会直接照搬大号展示标题或营销组件；实际应用以产品蓝图中的中文工具界面规范为准。
@@ -85,6 +90,7 @@ Server Components 直接调用 DAL 查询数据；写操作使用 Server Actions
 ## 常用命令
 
 ```bash
+pnpm env:check        # 校验服务端配置，不连接数据库
 pnpm dev              # 启动开发服务器
 pnpm build            # 生产构建
 pnpm typecheck        # TypeScript 检查
@@ -131,7 +137,6 @@ pnpm build
 
 - `GET /api/health/live`：只确认进程可响应，适合高频存活探针。
 - `GET /api/health/ready`：执行轻量数据库查询，适合就绪探针。
-- `GET /api/health`：兼容入口，与 ready 返回相同结果。
 - SQLite `quick_check` 只在“设置 → 关于”和备份流程中低频执行，不作为外部高频探针。
 
 ## 安全、限流与审计
@@ -139,7 +144,7 @@ pnpm build
 - 所有动态请求由 `proxy.ts` 生成新的 `x-request-id`，服务端日志和审计事件使用它关联同一次请求。
 - Next.js 为所有响应设置 CSP、禁止嵌入、内容类型嗅探限制、Referrer Policy 和 Permissions Policy。
 - Better Auth 的限流在开发和生产环境均显式启用，状态保存在 SQLite 的 `rate_limit` 表中；登录和修改密码默认为每分钟最多 5 次。
-- 登录成功、会话撤销、用户创建/停用/删除、密码修改/重置和永久删除项目会写入 `audit_event`。管理员可在“设置 → 管理 → 审计日志”查看只读记录；列表采用服务端分页，每页 20 条。审计表不保存密码、Cookie、token 或表单内容。
+- 登录成功、会话撤销、用户创建/停用/删除、密码修改/重置和永久删除项目会写入 `audit_event`。管理员可在侧边栏“管理 → 审计日志”查看只读记录；列表采用服务端分页，默认每页 20 条，可切换每页条数。审计表不保存密码、Cookie、token 或表单内容。
 - 服务端日志为一行一个 JSON 对象；`authorization`、`cookie`、`password`、`secret`、`token` 等字段会递归脱敏。
 
 运行日志面向终端、服务管理器或日志平台，不在应用设置中提供原文查看界面。通用模板不提供业务 JSON 导入/导出；完整数据保护使用 SQLite 备份与恢复流程，具体业务确有交换需求时再设计专用格式。

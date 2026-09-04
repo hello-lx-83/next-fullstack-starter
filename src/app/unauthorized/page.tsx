@@ -15,8 +15,8 @@ export default function UnauthorizedPage() {
           <CardDescription>当前账号不能访问这个页面。</CardDescription>
         </CardHeader>
         <CardContent>
-          <Button asChild>
-            <Link href="/dashboard">返回工作台</Link>
+          <Button render={<Link href="/dashboard" />} nativeButton={false} role="link">
+            返回工作台
           </Button>
         </CardContent>
       </Card>

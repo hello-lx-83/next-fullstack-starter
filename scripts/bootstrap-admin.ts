@@ -1,15 +1,7 @@
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
-import { existsSync } from "node:fs";
-
-function loadLocalEnv() {
-  if (existsSync(".env.local")) {
-    process.loadEnvFile(".env.local");
-  } else if (existsSync(".env")) {
-    process.loadEnvFile(".env");
-  }
-}
+import { loadLocalEnv } from "./lib/load-env";
 
 const adminEnvSchema = z.object({
   ADMIN_NAME: z.string().trim().min(1),

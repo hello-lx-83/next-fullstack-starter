@@ -27,11 +27,9 @@ export default async function DashboardPage() {
         title={`你好，${session.user.name}`}
         description="从最近的工作继续，或进入项目列表开始新的内容。"
         actions={
-          <Button asChild>
-            <Link href="/dashboard/projects">
-              查看项目
-              <ArrowRight data-icon="inline-end" />
-            </Link>
+          <Button render={<Link href="/dashboard/projects" />} nativeButton={false} role="link">
+            查看项目
+            <ArrowRight data-icon="inline-end" />
           </Button>
         }
       />
@@ -66,11 +64,15 @@ export default async function DashboardPage() {
             <CardDescription>按最近更新时间排列。</CardDescription>
           </div>
           {overview.recentProjects.length > 0 ? (
-            <Button asChild variant="ghost" size="sm">
-              <Link href="/dashboard/projects">
-                查看全部
-                <ArrowRight data-icon="inline-end" />
-              </Link>
+            <Button
+              variant="ghost"
+              size="sm"
+              render={<Link href="/dashboard/projects" />}
+              nativeButton={false}
+              role="link"
+            >
+              查看全部
+              <ArrowRight data-icon="inline-end" />
             </Button>
           ) : null}
         </CardHeader>
@@ -106,8 +108,8 @@ export default async function DashboardPage() {
                 <EmptyTitle>还没有项目</EmptyTitle>
                 <EmptyDescription>进入项目列表创建第一条真实业务数据。</EmptyDescription>
               </EmptyHeader>
-              <Button asChild>
-                <Link href="/dashboard/projects">进入项目列表</Link>
+              <Button render={<Link href="/dashboard/projects" />} nativeButton={false} role="link">
+                进入项目列表
               </Button>
             </Empty>
           )}

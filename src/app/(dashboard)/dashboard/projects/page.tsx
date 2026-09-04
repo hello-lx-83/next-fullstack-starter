@@ -1,9 +1,6 @@
 import { redirect } from "next/navigation";
 
-import { Plus } from "lucide-react";
-
 import { PageHeader } from "@/components/shared/page-header";
-import { Button } from "@/components/ui/button";
 import { ProjectDialog } from "@/features/projects/project-dialogs";
 import { ProjectTable } from "@/features/projects/project-table";
 import { parseProjectListQuery, projectListHref } from "@/features/projects/schema";
@@ -26,17 +23,7 @@ export default async function ProjectsPage({
       <PageHeader
         title="项目"
         description="项目增删改查示例；普通用户只能访问自己的项目。"
-        actions={
-          <ProjectDialog
-            mode="create"
-            trigger={
-              <Button>
-                <Plus data-icon="inline-start" />
-                新建项目
-              </Button>
-            }
-          />
-        }
+        actions={<ProjectDialog mode="create" />}
       />
       <ProjectTable
         projects={result.projects}

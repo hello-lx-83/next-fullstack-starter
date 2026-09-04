@@ -2,19 +2,22 @@ import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 
-import { existsSync, rmSync } from "node:fs";
+import { testDirectory, testEnv } from "./environment";
+import { existsSync, mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 
 async function prepare() {
-  const databasePath = resolve("data/e2e.db");
-  if (existsSync(databasePath)) rmSync(databasePath);
-  process.env.DATABASE_URL = databasePath;
-  process.env.BETTER_AUTH_URL = "http://localhost:3100";
-  process.env.BETTER_AUTH_SECRET = "e2e-test-secret-at-least-32-characters-long";
+  const databasePath = testEnv.DATABASE_URL;
+  if (existsSync(databasePath)) throw new Error("E2E 数据库已存在，请启动新的测试运行");
+  mkdirSync(testDirectory, { recursive: true });
+  Object.assign(process.env, testEnv);
 
   const sqlite = new Database(databasePath);
-  migrate(drizzle(sqlite), { migrationsFolder: resolve("drizzle") });
-  sqlite.close();
+  try {
+    migrate(drizzle(sqlite), { migrationsFolder: resolve("drizzle") });
+  } finally {
+    sqlite.close();
+  }
 
   const [{ createAuth }, { db }, { user }] = await Promise.all([
     import("../../src/server/auth/index"),

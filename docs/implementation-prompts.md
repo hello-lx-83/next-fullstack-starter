@@ -1,5 +1,7 @@
 # UI 与基础设施实施提示词
 
+本文保留为已实施改造的历史参考，不应直接将各阶段视为当前待办；继续开发前请先核对现有实现、AGENTS.md 和 README。
+
 这些提示词把 [`product-blueprint.md`](./product-blueprint.md) 拆成可验证的小批次。每次只执行一个阶段；不要一次提交整套重构。
 
 所有阶段的共同前置提示：
@@ -23,7 +25,7 @@ node_modules/next/dist/docs 中对应的 Next.js 16 文档。
 只做审计和测试基线，不改变视觉。
 
 1. 列出现有 dashboard、profile、users、roles、projects 路由和权限行为。
-2. 为目标设置路由与旧路由重定向制定测试矩阵。
+2. 为当前设置路由制定测试矩阵，不保留历史兼容入口。
 3. 记录桌面 1440px 和移动 390px 的关键页面截图或结构快照。
 4. 标记所有把 Card 当默认页面容器、所有在主导航暴露设置项的位置。
 5. 输出最小改动顺序和风险；不要实现下一阶段。
@@ -40,7 +42,7 @@ node_modules/next/dist/docs 中对应的 Next.js 16 文档。
 - 主侧栏只保留首页、项目等业务项。
 - 左下角用户行打开 DropdownMenu；只提供设置总入口和退出登录。
 - 建立 /dashboard/settings layout、设置分组导航和空的目标页面骨架。
-- /dashboard/profile、/dashboard/users、/dashboard/roles 服务端重定向到新地址。
+- 页面只使用当前路由，不为旧地址新增重定向。
 - 顶栏显示当前页面上下文，不再固定显示“本地工作台”；右上角提供浅色/深色快捷切换。
 - 移动使用现有 Sidebar/Sheet 能力，用户入口位于移动导航底部。
 
@@ -63,7 +65,6 @@ node_modules/next/dist/docs 中对应的 Next.js 16 文档。
 - /settings/security：修改密码；若现有 Better Auth 能力已支持且无需扩大范围，再展示会话列表。
 - /settings/appearance：把现有 preference registry 中适合用户理解的主题、字体、内容宽度、侧栏选项做成 UI。
 - /settings/users 与 /settings/roles：迁移现有管理员页面。
-- /settings/data：先提供数据位置、备份命令和恢复文档入口；不要实现会覆盖数据库的 UI。
 - /settings/about：版本、运行模式、窄化后的健康状态。
 
 组件规则：

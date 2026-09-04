@@ -1,7 +1,8 @@
 import "server-only";
 
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, count, desc, eq, or, type SQL, sql } from "drizzle-orm";
 
+import { type UserListQuery, userListQuerySchema } from "@/features/users/schema";
 import { isAdmin } from "@/server/auth/permissions";
 import { getCurrentSession, requireAdmin } from "@/server/auth/session";
 import { db } from "@/server/db";
@@ -16,21 +17,50 @@ export interface UserDto {
   createdAt: string;
 }
 
-export async function listUsers(): Promise<UserDto[]> {
+export async function listUsers(
+  input: UserListQuery,
+  database: typeof db = db,
+): Promise<{ users: UserDto[]; total: number }> {
   await requireAdmin();
-  const rows = await db
-    .select({
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      banned: user.banned,
-      createdAt: user.createdAt,
-    })
-    .from(user)
-    .orderBy(asc(user.createdAt));
-
-  return rows.map((row) => ({ ...row, createdAt: row.createdAt.toISOString() }));
+  const query = userListQuerySchema.parse(input);
+  const conditions: SQL[] = [];
+  if (query.role !== "all") conditions.push(eq(user.role, query.role));
+  if (query.status !== "all") conditions.push(eq(user.banned, query.status === "banned"));
+  if (query.q) {
+    const match = or(
+      sql`instr(lower(${user.name}), lower(${query.q})) > 0`,
+      sql`instr(lower(${user.email}), lower(${query.q})) > 0`,
+    );
+    if (match) conditions.push(match);
+  }
+  const where = and(...conditions);
+  const order = {
+    "created-desc": desc(user.createdAt),
+    "created-asc": asc(user.createdAt),
+    "name-asc": asc(user.name),
+    "name-desc": desc(user.name),
+  };
+  const [rows, totals] = await Promise.all([
+    database
+      .select({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        banned: user.banned,
+        createdAt: user.createdAt,
+      })
+      .from(user)
+      .where(where)
+      .orderBy(order[query.sort], asc(user.id))
+      .limit(query.pageSize)
+      .offset((query.page - 1) * query.pageSize),
+    database.select({ total: count() }).from(user).where(where),
+  ]);
+  return {
+    users: rows.map((row) => ({ ...row, createdAt: row.createdAt.toISOString() })),
+    total: totals[0]?.total ?? 0,
+  };
 }
 
 export async function setUserBanned(

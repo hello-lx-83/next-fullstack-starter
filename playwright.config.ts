@@ -1,13 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const testEnv = {
-  ADMIN_EMAIL: "admin@example.com",
-  ADMIN_NAME: "测试管理员",
-  ADMIN_PASSWORD: "AdminPass123!",
-  BETTER_AUTH_SECRET: "e2e-test-secret-at-least-32-characters-long",
-  BETTER_AUTH_URL: "http://localhost:3100",
-  DATABASE_URL: "./data/e2e.db",
-};
+import { testEnv } from "./tests/e2e/environment";
 
 const configuredBrowserChannel = process.env.PLAYWRIGHT_BROWSER_CHANNEL;
 const browserChannel =
@@ -18,14 +11,16 @@ export default defineConfig({
   testDir: "./tests/e2e",
   globalTeardown: "./tests/e2e/teardown.ts",
   expect: { timeout: 15_000 },
+  forbidOnly: Boolean(process.env.CI),
   fullyParallel: false,
   workers: 1,
   retries: 0,
-  reporter: "list",
+  reporter: [["list"], ["html", { open: "never" }]],
   use: {
     baseURL: testEnv.BETTER_AUTH_URL,
     navigationTimeout: 30_000,
     trace: "retain-on-failure",
+    screenshot: "only-on-failure",
   },
   projects: [
     {
@@ -46,7 +41,7 @@ export default defineConfig({
   webServer: {
     command: "tsx tests/e2e/server.ts",
     env: testEnv,
-    url: testEnv.BETTER_AUTH_URL,
+    url: `${testEnv.BETTER_AUTH_URL}/api/health/ready`,
     reuseExistingServer: false,
     timeout: 120_000,
   },

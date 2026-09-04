@@ -23,3 +23,36 @@ export const resetUserPasswordSchema = z
     message: "两次输入的密码不一致",
     path: ["confirmPassword"],
   });
+
+export const userListQuerySchema = z.object({
+  q: z.string().trim().max(100).catch(""),
+  role: z.enum(["all", "admin", "user"]).catch("all"),
+  status: z.enum(["all", "active", "banned"]).catch("all"),
+  sort: z.enum(["created-desc", "created-asc", "name-asc", "name-desc"]).catch("created-desc"),
+  page: z.coerce.number().int().min(1).max(1_000_000).catch(1),
+  pageSize: z.coerce
+    .number()
+    .pipe(z.union([z.literal(10), z.literal(20), z.literal(50)]))
+    .catch(20),
+});
+
+export type UserListQuery = z.infer<typeof userListQuerySchema>;
+
+export function parseUserListQuery(params: Record<string, string | string[] | undefined>): UserListQuery {
+  return userListQuerySchema.parse(
+    Object.fromEntries(Object.entries(params).map(([key, value]) => [key, Array.isArray(value) ? value[0] : value])),
+  );
+}
+
+export function userListHref(query: UserListQuery, overrides: Partial<UserListQuery> = {}) {
+  const next = { ...query, ...overrides };
+  const params = new URLSearchParams();
+  if (next.q) params.set("q", next.q);
+  if (next.role !== "all") params.set("role", next.role);
+  if (next.status !== "all") params.set("status", next.status);
+  if (next.sort !== "created-desc") params.set("sort", next.sort);
+  if (next.page > 1) params.set("page", String(next.page));
+  if (next.pageSize !== 20) params.set("pageSize", String(next.pageSize));
+  const search = params.toString();
+  return `/dashboard/users${search ? `?${search}` : ""}`;
+}

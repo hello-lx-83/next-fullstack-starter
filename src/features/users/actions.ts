@@ -40,7 +40,7 @@ export async function createUserAction(
       targetId: created.user.id,
       targetType: "user",
     });
-    revalidatePath("/dashboard/settings/users");
+    revalidatePath("/dashboard/users");
     return { ok: true, data: { id: created.user.id } };
   } catch (error) {
     await logRequestError("user.create_failed", error);
@@ -69,7 +69,7 @@ export async function setUserBannedAction(userId: string, banned: boolean): Prom
     targetId: parsed.data.userId,
     targetType: "user",
   });
-  revalidatePath("/dashboard/settings/users");
+  revalidatePath("/dashboard/users");
   return { ok: true };
 }
 
@@ -94,7 +94,7 @@ export async function deleteUserAction(userId: string): Promise<ActionResult> {
     targetId: parsed.data.userId,
     targetType: "user",
   });
-  revalidatePath("/dashboard/settings/users");
+  revalidatePath("/dashboard/users");
   return { ok: true };
 }
 
@@ -134,6 +134,6 @@ export async function resetUserPasswordAction(
     targetId: parsed.data.userId,
     targetType: "user",
   });
-  revalidatePath("/dashboard/settings/users");
+  revalidatePath("/dashboard/users");
   return { ok: true, data: { reset: true } };
 }

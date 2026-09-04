@@ -1,8 +1,7 @@
+import { pidFile } from "./environment";
 import { existsSync, readFileSync, rmSync } from "node:fs";
-import { resolve } from "node:path";
 
 export default function teardown() {
-  const pidFile = resolve("data/e2e-server.pid");
   if (!existsSync(pidFile)) return;
 
   const pid = Number(readFileSync(pidFile, "utf8"));

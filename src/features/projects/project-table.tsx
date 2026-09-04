@@ -18,7 +18,6 @@ import {
 } from "lucide-react";
 import { AnimatePresence } from "motion/react";
 import * as m from "motion/react-m";
-import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -45,6 +44,7 @@ import {
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { toast } from "@/components/ui/toast";
 import { setProjectsStatusAction } from "@/features/projects/actions";
 import { ProjectActions } from "@/features/projects/project-dialogs";
 import { type ProjectDto, type ProjectListQuery, type ProjectSort, projectListHref } from "@/features/projects/schema";
@@ -65,7 +65,8 @@ const projectColumns = columnHelper.columns([
       return (
         <Checkbox
           aria-label="选择当前页全部项目"
-          checked={checked}
+          checked={checked === true}
+          indeterminate={checked === "indeterminate"}
           onCheckedChange={(nextChecked) => table.toggleAllPageRowsSelected(Boolean(nextChecked))}
         />
       );
@@ -229,15 +230,18 @@ export function ProjectTable({
       try {
         const result = await setProjectsStatusAction(selectedIds, status);
         if (!result.ok) {
-          toast.error(result.message);
+          toast.add({ type: "error", title: result.message });
           return;
         }
         table.resetRowSelection(true);
         const updated = result.data?.updated ?? 0;
-        toast.success(status === "archived" ? `已归档 ${updated} 个项目` : `已恢复 ${updated} 个项目`);
+        toast.add({
+          type: "success",
+          title: status === "archived" ? `已归档 ${updated} 个项目` : `已恢复 ${updated} 个项目`,
+        });
         router.refresh();
       } catch {
-        toast.error("批量更新项目失败，请稍后重试");
+        toast.add({ type: "error", title: "批量更新项目失败，请稍后重试" });
       }
     });
   }
@@ -263,6 +267,11 @@ export function ProjectTable({
           <Select
             value={query.status}
             onValueChange={(value) => navigate({ status: value as ProjectListQuery["status"], page: 1 })}
+            items={[
+              { value: "all", label: "全部状态" },
+              { value: "active", label: "进行中" },
+              { value: "archived", label: "已归档" },
+            ]}
           >
             <SelectTrigger aria-label="筛选项目状态">
               <SelectValue />
@@ -277,11 +286,9 @@ export function ProjectTable({
           </Select>
           <div className="hidden md:block">
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline">
-                  <Columns3 data-icon="inline-start" />
-                  显示列
-                </Button>
+              <DropdownMenuTrigger render={<Button variant="outline" />}>
+                <Columns3 data-icon="inline-start" />
+                显示列
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-40">
                 <DropdownMenuLabel>切换显示列</DropdownMenuLabel>
@@ -440,6 +447,11 @@ export function ProjectTable({
           <Select
             value={String(query.pageSize)}
             onValueChange={(value) => navigate({ pageSize: Number(value) as ProjectListQuery["pageSize"], page: 1 })}
+            items={[
+              { value: "10", label: "每页 10 条" },
+              { value: "20", label: "每页 20 条" },
+              { value: "50", label: "每页 50 条" },
+            ]}
           >
             <SelectTrigger size="sm" aria-label="每页项目数">
               <SelectValue />

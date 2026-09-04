@@ -1,14 +1,14 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
-
-import { toast } from "sonner";
+import { useActionState, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
+import { toast } from "@/components/ui/toast";
 import { changePasswordAction, updateProfileAction } from "@/features/profile/actions";
+import { useSettingsFormGuard } from "@/features/settings/settings-guard";
 import type { ActionResult } from "@/lib/action-result";
 
 type ProfileActionResult = ActionResult<{ message: string }>;
@@ -25,12 +25,17 @@ function formatErrors(errors: string[] | undefined) {
 }
 
 export function ProfileForm({ name, email }: { name: string; email: string }) {
+  const [dirty, setDirty] = useState(false);
   const [state, action, pending] = useActionState(updateProfileAction, initialState);
+  useSettingsFormGuard(dirty, pending);
   const fieldErrors = state.ok ? undefined : state.fieldErrors;
   const nameInvalid = Boolean(fieldErrors?.name?.length);
 
   useEffect(() => {
-    if (state.ok && state.data) toast.success(state.data.message);
+    if (state.ok && state.data) {
+      setDirty(false);
+      toast.add({ type: "success", title: state.data.message });
+    }
   }, [state]);
 
   return (
@@ -42,6 +47,7 @@ export function ProfileForm({ name, email }: { name: string; email: string }) {
             id="profile-name"
             name="name"
             defaultValue={name}
+            onChange={(event) => setDirty(event.target.value !== name)}
             autoComplete="name"
             aria-invalid={nameInvalid}
             required
@@ -66,8 +72,10 @@ export function ProfileForm({ name, email }: { name: string; email: string }) {
 }
 
 export function PasswordForm() {
+  const [dirty, setDirty] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const [state, action, pending] = useActionState(changePasswordAction, initialState);
+  useSettingsFormGuard(dirty, pending);
   const fieldErrors = state.ok ? undefined : state.fieldErrors;
   const currentPasswordInvalid = Boolean(fieldErrors?.currentPassword?.length);
   const newPasswordInvalid = Boolean(fieldErrors?.newPassword?.length);
@@ -76,12 +84,20 @@ export function PasswordForm() {
   useEffect(() => {
     if (state.ok && state.data) {
       formRef.current?.reset();
-      toast.success(state.data.message);
+      setDirty(false);
+      toast.add({ type: "success", title: state.data.message });
     }
   }, [state]);
 
   return (
-    <form ref={formRef} action={action} className="flex max-w-xl flex-col gap-6">
+    <form
+      ref={formRef}
+      onChange={() =>
+        setDirty(Array.from(formRef.current?.querySelectorAll("input") ?? []).some((input) => input.value !== ""))
+      }
+      action={action}
+      className="flex max-w-xl flex-col gap-6"
+    >
       <FieldGroup>
         <Field data-invalid={currentPasswordInvalid}>
           <FieldLabel htmlFor="current-password">当前密码</FieldLabel>

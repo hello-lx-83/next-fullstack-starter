@@ -29,15 +29,21 @@ yarn-debug.log*
 yarn-error.log*
 
 # local env files
-.env
-.env*.local
+.env*
 !.env.example
 
 # local sqlite data
 /data/*
 !/data/.gitkeep
+*.db
+*.sqlite
+*.sqlite3
 *.db-wal
 *.db-shm
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite3-wal
+*.sqlite3-shm
 
 # vercel
 .vercel

@@ -1,8 +1,9 @@
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { getCurrentSession } from "@/server/auth/session";
-import { setUserBanned } from "@/server/dal/users";
+import { parseUserListQuery } from "@/features/users/schema";
+import { getCurrentSession, requireAdmin } from "@/server/auth/session";
+import { listUsers, setUserBanned } from "@/server/dal/users";
 import { createDatabase } from "@/server/db";
 import { session, user } from "@/server/db/schema";
 
@@ -54,5 +55,43 @@ describe("用户 DAL", () => {
   it("拒绝普通用户执行管理操作", async () => {
     mockSession("user-1", "user");
     await expect(setUserBanned({ userId: "user-1", banned: false }, database.db)).resolves.toBe("unauthorized");
+  });
+
+  it("按角色、状态和姓名或邮箱组合筛选，搜索通配符按文字处理", async () => {
+    await database.db.insert(user).values([
+      { id: "match", name: "完成度 100%", email: "match@example.com", role: "user", banned: true },
+      { id: "other", name: "其他用户", email: "other@example.com", role: "user" },
+    ]);
+    const query = parseUserListQuery({ q: "%", role: "user", status: "banned" });
+    const result = await listUsers(query, database.db);
+    expect(result.total).toBe(1);
+    expect(result.users.map((item) => item.id)).toEqual(["match"]);
+    expect((await listUsers({ ...query, q: "MATCH@EXAMPLE" }, database.db)).users[0]?.id).toBe("match");
+    expect((await listUsers({ ...query, role: "admin" }, database.db)).total).toBe(0);
+  });
+
+  it("分页保持稳定排序且只返回当前页的必要字段", async () => {
+    await database.db.insert(user).values(
+      Array.from({ length: 23 }, (_, i) => ({
+        id: `page-${String(i).padStart(2, "0")}`,
+        name: "分页用户",
+        email: `page-${i}@example.com`,
+      })),
+    );
+    const query = parseUserListQuery({ q: "分页用户", pageSize: "10", sort: "name-asc" });
+    const first = await listUsers(query, database.db);
+    const second = await listUsers({ ...query, page: 2 }, database.db);
+    const last = await listUsers({ ...query, page: 3 }, database.db);
+    expect(first.total).toBe(23);
+    expect(first.users).toHaveLength(10);
+    expect(second.users[0]?.id).toBe("page-10");
+    expect(last.users).toHaveLength(3);
+    expect(new Set([...first.users, ...second.users, ...last.users].map((item) => item.id)).size).toBe(23);
+    expect(Object.keys(first.users[0]).sort()).toEqual(["banned", "createdAt", "email", "id", "name", "role"]);
+  });
+
+  it("鉴权失败时拒绝读取用户列表", async () => {
+    vi.mocked(requireAdmin).mockRejectedValueOnce(new Error("unauthorized"));
+    await expect(listUsers(parseUserListQuery({}), database.db)).rejects.toThrow("unauthorized");
   });
 });

@@ -1,34 +1,56 @@
-import { spawn } from "node:child_process";
+import { pidFile, testEnv } from "./environment";
+import { type ChildProcess, spawn } from "node:child_process";
 import { rmSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { createRequire } from "node:module";
 
-const pidFile = resolve("data/e2e-server.pid");
+const require = createRequire(import.meta.url);
+let activeChild: ChildProcess | undefined;
+let stopping = false;
 
-function run(command: string, args: string[], shell = false) {
-  return spawn(command, args, {
-    env: process.env,
-    shell,
-    stdio: "inherit",
+function stop() {
+  stopping = true;
+  activeChild?.kill("SIGTERM");
+}
+
+process.once("SIGINT", stop);
+process.once("SIGTERM", stop);
+
+function run(args: string[], recordPid = false): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, args, {
+      env: { ...process.env, ...testEnv },
+      stdio: "inherit",
+    });
+    activeChild = child;
+    if (recordPid && child.pid) writeFileSync(pidFile, String(child.pid));
+    child.once("error", reject);
+    child.once("close", (code) => {
+      activeChild = undefined;
+      resolve(code ?? 1);
+    });
   });
 }
 
-const pnpmCli = process.env.npm_execpath;
-if (!pnpmCli) throw new Error("无法定位当前 pnpm CLI");
-const build = run(process.execPath, [pnpmCli, "build"]);
-build.once("exit", (code) => {
-  if (code !== 0) process.exit(code ?? 1);
+async function main() {
+  const prepared = await run(["--import", "tsx", "tests/e2e/prepare.ts"]);
+  if (prepared !== 0 || stopping) return prepared || 1;
 
-  const server = run(process.execPath, ["node_modules/next/dist/bin/next", "start", "--port", "3100"]);
-  if (!server.pid) process.exit(1);
-  writeFileSync(pidFile, String(server.pid));
+  const nextCli = require.resolve("next/dist/bin/next");
+  const built = await run([nextCli, "build"]);
+  if (built !== 0 || stopping) return built || 1;
 
-  const stop = () => {
-    if (!server.killed) server.kill("SIGTERM");
-  };
-  process.once("SIGINT", stop);
-  process.once("SIGTERM", stop);
-  server.once("exit", (serverCode) => {
+  try {
+    return await run([nextCli, "start", "--port", "3100"], true);
+  } finally {
     rmSync(pidFile, { force: true });
-    process.exit(serverCode ?? 0);
+  }
+}
+
+main()
+  .then((code) => {
+    process.exitCode = code;
+  })
+  .catch((error: unknown) => {
+    console.error(error);
+    process.exitCode = 1;
   });
-});
